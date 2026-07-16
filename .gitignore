@@ -1,0 +1,35 @@
+# Maven
+target/
+*.log
+
+# Eclipse
+.settings/
+.classpath
+.project
+.factorypath
+*.launch
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Variáveis e arquivos privados
+.env
+.env.*
+!.env.example
+application-local.properties
+application-secret.properties
+
+# Chaves e certificados
+*.jks
+*.p12
+*.pfx
+*.pem
+*.key
