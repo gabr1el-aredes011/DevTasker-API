@@ -1,6 +1,6 @@
 package br.com.devtasker.api.board.service;
 
-import java.util.List;
+import java.util.List;	
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,25 +15,35 @@ import br.com.devtasker.api.board.repository.BoardRepository;
 import br.com.devtasker.api.exception.BoardNotFoundException;
 import br.com.devtasker.api.exception.ProjectNotFoundException;
 import br.com.devtasker.api.project.repository.ProjectMemberRepository;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
+import br.com.devtasker.api.board.dto.KanbanBoardResponse;
+import br.com.devtasker.api.board.dto.KanbanColumnResponse;
+import br.com.devtasker.api.board.dto.KanbanTaskResponse;
+import br.com.devtasker.api.task.domain.Task;
+import br.com.devtasker.api.task.repository.TaskRepository;
 
 @Service
 public class BoardQueryService {
 
     private final BoardRepository boardRepository;
     private final BoardColumnRepository boardColumnRepository;
+    private final TaskRepository taskRepository;
     private final ProjectMemberRepository
             projectMemberRepository;
 
     public BoardQueryService(
             BoardRepository boardRepository,
             BoardColumnRepository boardColumnRepository,
-            ProjectMemberRepository projectMemberRepository
+            ProjectMemberRepository projectMemberRepository,
+            TaskRepository taskRepository
     ) {
         this.boardRepository = boardRepository;
-        this.boardColumnRepository =
-                boardColumnRepository;
-        this.projectMemberRepository =
-                projectMemberRepository;
+        this.boardColumnRepository = boardColumnRepository;
+        this.projectMemberRepository = projectMemberRepository;
+        this.taskRepository = taskRepository;
     }
 
     @Transactional(readOnly = true)
@@ -113,6 +123,98 @@ public class BoardQueryService {
                 column.getName(),
                 column.getCategory(),
                 column.getPosition()
+        );
+    }
+    @Transactional(readOnly = true)
+    public KanbanBoardResponse findKanbanByBoardId(
+            Long boardId,
+            Long userId
+    ) {
+        Board board = boardRepository
+                .findById(boardId)
+                .orElseThrow(BoardNotFoundException::new);
+
+        Long projectId = board
+                .getProject()
+                .getId();
+
+        boolean hasAccess = projectMemberRepository
+                .existsByProject_IdAndUser_Id(
+                        projectId,
+                        userId
+                );
+
+        if (!hasAccess) {
+            throw new BoardNotFoundException();
+        }
+
+        var columns = boardColumnRepository
+                .findAllByBoard_IdOrderByPositionAsc(boardId);
+
+        var tasks = taskRepository
+                .findAllActiveByBoardId(boardId);
+
+        Map<Long, List<KanbanTaskResponse>> tasksByColumn =
+                groupTasksByColumn(tasks);
+
+        List<KanbanColumnResponse> columnResponses =
+                columns.stream()
+                        .map(column ->
+                                new KanbanColumnResponse(
+                                        column.getId(),
+                                        column.getName(),
+                                        column.getCategory(),
+                                        column.getPosition(),
+                                        tasksByColumn.getOrDefault(
+                                                column.getId(),
+                                                List.of()
+                                        )
+                                )
+                        )
+                        .toList();
+
+        return new KanbanBoardResponse(
+                board.getId(),
+                projectId,
+                board.getName(),
+                columnResponses
+        );
+    }
+    private Map<Long, List<KanbanTaskResponse>>
+    groupTasksByColumn(List<Task> tasks) {
+
+        Map<Long, List<KanbanTaskResponse>> groupedTasks =
+                new HashMap<>();
+
+        for (Task task : tasks) {
+            Long columnId = task
+                    .getColumn()
+                    .getId();
+
+            groupedTasks
+                    .computeIfAbsent(
+                            columnId,
+                            ignored -> new ArrayList<>()
+                    )
+                    .add(toKanbanTaskResponse(task));
+        }
+
+        return groupedTasks;
+    }
+    
+    private KanbanTaskResponse toKanbanTaskResponse(
+            Task task
+    ) {
+        var assignee = task.getAssignee();
+
+        return new KanbanTaskResponse(
+                task.getId(),
+                task.getTitle(),
+                task.getPriority(),
+                task.getDueDate(),
+                task.getPosition(),
+                assignee == null ? null : assignee.getId(),
+                assignee == null ? null : assignee.getName()
         );
     }
 }

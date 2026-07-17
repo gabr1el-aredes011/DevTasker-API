@@ -41,4 +41,18 @@ public interface TaskRepository
     Optional<Long> findBoardIdByActiveTaskId(
             @Param("taskId") Long taskId
     );
+    
+    @Query("""
+            SELECT task
+            FROM Task task
+            JOIN FETCH task.column boardColumn
+            JOIN FETCH boardColumn.board board
+            LEFT JOIN FETCH task.assignee assignee
+            WHERE board.id = :boardId
+              AND task.archivedAt IS NULL
+            ORDER BY boardColumn.position ASC, task.position ASC
+            """)
+    List<Task> findAllActiveByBoardId(
+            @Param("boardId") Long boardId
+    );
 }

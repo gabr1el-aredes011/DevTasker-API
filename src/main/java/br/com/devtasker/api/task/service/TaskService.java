@@ -1,7 +1,7 @@
 package br.com.devtasker.api.task.service;
 
 import java.util.List;
-
+import java.util.ArrayList;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +19,7 @@ import br.com.devtasker.api.task.repository.TaskRepository;
 import br.com.devtasker.api.user.domain.UserAccount;
 import br.com.devtasker.api.user.repository.UserAccountRepository;
 import br.com.devtasker.api.task.dto.UpdateTaskRequest;
-import java.util.ArrayList;
+
 
 import br.com.devtasker.api.board.repository.BoardRepository;
 import br.com.devtasker.api.exception.BoardNotFoundException;
