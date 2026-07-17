@@ -113,6 +113,37 @@ public class Task {
                 position
         );
     }
+    
+    public void updateDetails(
+            String title,
+            String description,
+            TaskPriority priority,
+            LocalDate dueDate
+    ) {
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException(
+                    "O título da tarefa é obrigatório."
+            );
+        }
+
+        if (priority == null) {
+            throw new IllegalArgumentException(
+                    "A prioridade da tarefa é obrigatória."
+            );
+        }
+
+        this.title = title.trim();
+        this.description = description;
+        this.priority = priority;
+        this.dueDate = dueDate;
+    }
+
+    public void archive() {
+        if (this.archivedAt == null) {
+            this.archivedAt =
+                    OffsetDateTime.now(ZoneOffset.UTC);
+        }
+    }
 
     @PrePersist
     private void beforeInsert() {

@@ -2,6 +2,7 @@ package br.com.devtasker.api.task.service;
 
 import java.util.List;
 
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,7 @@ import br.com.devtasker.api.task.dto.TaskUserSummaryResponse;
 import br.com.devtasker.api.task.repository.TaskRepository;
 import br.com.devtasker.api.user.domain.UserAccount;
 import br.com.devtasker.api.user.repository.UserAccountRepository;
+import br.com.devtasker.api.task.dto.UpdateTaskRequest;
 
 @Service
 public class TaskService {
@@ -112,12 +114,7 @@ public class TaskService {
             Long taskId,
             Long userId
     ) {
-        Task task = taskRepository
-                .findById(taskId)
-                .filter(foundTask ->
-                        foundTask.getArchivedAt() == null
-                )
-                .orElseThrow(TaskNotFoundException::new);
+        Task task = findActiveTask(taskId);
 
         Long projectId = task
                 .getColumn()
@@ -183,5 +180,66 @@ public class TaskService {
                 user.getName(),
                 user.getProfileImageUrl()
         );
+    }
+    
+    @Transactional
+    public TaskResponse update(
+            Long taskId,
+            Long userId,
+            UpdateTaskRequest request
+    ) {
+        Task task = findActiveTask(taskId);
+
+        Long projectId = task
+                .getColumn()
+                .getBoard()
+                .getProject()
+                .getId();
+
+        projectAccessService.requireWriteAccess(
+                projectId,
+                userId
+        );
+
+        task.updateDetails(
+                request.title(),
+                normalizeDescription(request.description()),
+                request.priority(),
+                request.dueDate()
+        );
+
+        Task updatedTask =
+                taskRepository.saveAndFlush(task);
+
+        return toResponse(updatedTask);
+    }
+
+    @Transactional
+    public void archive(
+            Long taskId,
+            Long userId
+    ) {
+        Task task = findActiveTask(taskId);
+
+        Long projectId = task
+                .getColumn()
+                .getBoard()
+                .getProject()
+                .getId();
+
+        projectAccessService.requireWriteAccess(
+                projectId,
+                userId
+        );
+
+        task.archive();
+
+        taskRepository.save(task);
+    }
+    
+    private Task findActiveTask(Long taskId) {
+        return taskRepository
+                .findByIdAndArchivedAtIsNull(taskId)
+                .orElseThrow(TaskNotFoundException::new);
     }
 }

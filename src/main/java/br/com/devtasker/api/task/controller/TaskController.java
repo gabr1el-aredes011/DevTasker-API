@@ -1,6 +1,7 @@
 package br.com.devtasker.api.task.controller;
 
 import java.net.URI;
+
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,10 @@ import br.com.devtasker.api.task.dto.CreateTaskRequest;
 import br.com.devtasker.api.task.dto.TaskResponse;
 import br.com.devtasker.api.task.service.TaskService;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+
+import br.com.devtasker.api.task.dto.UpdateTaskRequest;
 
 @RestController
 public class TaskController {
@@ -76,5 +81,31 @@ public class TaskController {
         Number userId = jwt.getClaim("user_id");
 
         return userId.longValue();
+    }
+    
+    @PutMapping("/api/tasks/{taskId}")
+    public TaskResponse update(
+            @PathVariable Long taskId,
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody UpdateTaskRequest request
+    ) {
+        return taskService.update(
+                taskId,
+                extractUserId(jwt),
+                request
+        );
+    }
+
+    @DeleteMapping("/api/tasks/{taskId}")
+    public ResponseEntity<Void> archive(
+            @PathVariable Long taskId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        taskService.archive(
+                taskId,
+                extractUserId(jwt)
+        );
+
+        return ResponseEntity.noContent().build();
     }
 }
