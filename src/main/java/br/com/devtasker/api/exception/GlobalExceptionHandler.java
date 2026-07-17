@@ -179,4 +179,23 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(error);
     }
+    
+    @ExceptionHandler(InvalidTaskMoveException.class)
+    public ResponseEntity<ApiError> handleInvalidTaskMove(
+            InvalidTaskMoveException exception,
+            HttpServletRequest request
+    ) {
+        ApiError error = new ApiError(
+                HttpStatus.BAD_REQUEST.value(),
+                "INVALID_TASK_MOVE",
+                exception.getMessage(),
+                request.getRequestURI(),
+                OffsetDateTime.now(ZoneOffset.UTC),
+                Map.of()
+        );
+
+        return ResponseEntity
+                .badRequest()
+                .body(error);
+    }
 }

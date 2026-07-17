@@ -22,6 +22,9 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 
 import br.com.devtasker.api.task.dto.UpdateTaskRequest;
+import org.springframework.web.bind.annotation.PatchMapping;
+
+import br.com.devtasker.api.task.dto.MoveTaskRequest;
 
 @RestController
 public class TaskController {
@@ -107,5 +110,18 @@ public class TaskController {
         );
 
         return ResponseEntity.noContent().build();
+    }
+    
+    @PatchMapping("/api/tasks/{taskId}/move")
+    public TaskResponse move(
+            @PathVariable Long taskId,
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody MoveTaskRequest request
+    ) {
+        return taskService.move(
+                taskId,
+                extractUserId(jwt),
+                request
+        );
     }
 }

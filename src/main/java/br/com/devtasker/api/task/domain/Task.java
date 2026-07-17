@@ -144,7 +144,27 @@ public class Task {
                     OffsetDateTime.now(ZoneOffset.UTC);
         }
     }
+    
+    public void relocate(
+            BoardColumn targetColumn,
+            Integer targetPosition
+    ) {
+        if (targetColumn == null) {
+            throw new IllegalArgumentException(
+                    "A coluna de destino é obrigatória."
+            );
+        }
 
+        if (targetPosition == null || targetPosition < 0) {
+            throw new IllegalArgumentException(
+                    "A posição da tarefa não pode ser negativa."
+            );
+        }
+
+        this.column = targetColumn;
+        this.position = targetPosition;
+    }
+    
     @PrePersist
     private void beforeInsert() {
         OffsetDateTime now =

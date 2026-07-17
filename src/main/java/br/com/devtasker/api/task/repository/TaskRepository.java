@@ -31,4 +31,14 @@ public interface TaskRepository
     Optional<Task> findByIdAndArchivedAtIsNull(
             Long taskId
     );
+    
+    @Query("""
+            SELECT task.column.board.id
+            FROM Task task
+            WHERE task.id = :taskId
+              AND task.archivedAt IS NULL
+            """)
+    Optional<Long> findBoardIdByActiveTaskId(
+            @Param("taskId") Long taskId
+    );
 }
