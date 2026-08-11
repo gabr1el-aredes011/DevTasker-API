@@ -222,25 +222,47 @@ public class TaskService {
 
     @Transactional
     public void archive(
-            Long taskId,
-            Long userId
+        Long taskId,
+        Long userId
     ) {
         Task task = findActiveTask(taskId);
 
-        Long projectId = task
-                .getColumn()
-                .getBoard()
-                .getProject()
-                .getId();
+        BoardColumn column = task.getColumn();
+
+        Long projectId = column
+            .getBoard()
+            .getProject()
+            .getId();
 
         projectAccessService.requireWriteAccess(
-                projectId,
-                userId
+            projectId,
+            userId
         );
 
         task.archive();
 
-        taskRepository.save(task);
+        taskRepository.saveAndFlush(task);
+
+        List<Task> remainingTasks =
+            taskRepository
+                .findAllByColumn_IdAndArchivedAtIsNullOrderByPositionAsc(
+                    column.getId()
+                );
+
+       
+        moveToTemporaryPositions(
+            remainingTasks,
+            column
+        );
+
+        taskRepository.flush();
+
+        applyFinalPositions(
+            remainingTasks,
+            column
+        );
+
+        taskRepository.flush();
     }
     
     private Task findActiveTask(Long taskId) {
@@ -484,10 +506,7 @@ public class TaskService {
             );
         }
 
-        /*
-         * O valor 1000 cria distância suficiente das posições
-         * normais da coluna.
-         */
+       
         return maximumPosition + tasks.size() + 1000;
     }
 

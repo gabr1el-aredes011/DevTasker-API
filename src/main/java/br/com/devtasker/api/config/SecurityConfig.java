@@ -1,6 +1,6 @@
 package br.com.devtasker.api.config;
 
-import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Bean;			
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,6 +14,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.Customizer;
+import jakarta.servlet.DispatcherType;
 
 @Configuration
 public class SecurityConfig {
@@ -61,6 +63,7 @@ public class SecurityConfig {
     ) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
 
@@ -70,12 +73,18 @@ public class SecurityConfig {
                         )
                 )
 
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/auth/register",
-                                "/api/auth/login"
+                .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(
+                                DispatcherType.ERROR
                         ).permitAll()
+
+                        .requestMatchers(
+                        	    HttpMethod.POST,
+                        	    "/api/auth/email-verification/confirm",
+                        	    "/api/auth/email-verification/resend"
+                        	)
+                        	.permitAll()
+
                         .anyRequest().authenticated()
                 )
 

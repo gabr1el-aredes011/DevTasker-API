@@ -42,6 +42,9 @@ public class UserAccount {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private UserRole role;
+    
+    @Column(name = "email_verified_at")
+    private OffsetDateTime emailVerifiedAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -74,6 +77,17 @@ public class UserAccount {
         );
     }
 
+    public boolean isEmailVerified() {
+        return emailVerifiedAt != null;
+    }
+
+    public void verifyEmail() {
+        if (emailVerifiedAt == null) {
+            emailVerifiedAt =
+                    OffsetDateTime.now(ZoneOffset.UTC);
+        }
+    }
+    
     @PrePersist
     private void beforeInsert() {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
