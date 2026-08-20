@@ -76,6 +76,45 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void shouldReturnGenericErrorForPasswordRecoveryFailure() {
+        PasswordRecoveryException exception =
+                mock(PasswordRecoveryException.class);
+
+        when(exception.getStatus())
+                .thenReturn(HttpStatus.BAD_REQUEST);
+
+        when(exception.getErrorCode())
+                .thenReturn("PASSWORD_RECOVERY_FAILED");
+
+        when(exception.getMessage())
+                .thenReturn("Estado interno sensível");
+
+        ResponseEntity<ApiError> response =
+                handler.handlePasswordRecovery(
+                        exception,
+                        request
+                );
+
+        ApiError error = response.getBody();
+
+        assertAll(
+                () -> assertEquals(
+                        HttpStatus.BAD_REQUEST,
+                        response.getStatusCode()
+                ),
+                () -> assertEquals(
+                        "PASSWORD_RECOVERY_FAILED",
+                        error.error()
+                ),
+                () -> assertEquals(
+                        "Não foi possível concluir "
+                        + "a recuperação de senha.",
+                        error.message()
+                )
+        );
+    }
+
+    @Test
     void shouldReturnServiceUnavailableWhenEmailDeliveryFails() {
         ResponseEntity<ApiError> response =
                 handler.handleEmailDelivery(
