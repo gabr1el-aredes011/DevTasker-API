@@ -1,11 +1,12 @@
 package br.com.devtasker.api.config;
 
-import org.springframework.context.annotation.Bean;			
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -14,7 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.config.Customizer;
+
 import jakarta.servlet.DispatcherType;
 
 @Configuration
@@ -79,11 +80,13 @@ public class SecurityConfig {
                         ).permitAll()
 
                         .requestMatchers(
-                        	    HttpMethod.POST,
-                        	    "/api/auth/email-verification/confirm",
-                        	    "/api/auth/email-verification/resend"
-                        	)
-                        	.permitAll()
+                                HttpMethod.POST,
+                                "/api/auth/register",
+                                "/api/auth/login",
+                                "/api/auth/email-verification/confirm",
+                                "/api/auth/email-verification/resend"
+                        )
+                        .permitAll()
 
                         .anyRequest().authenticated()
                 )

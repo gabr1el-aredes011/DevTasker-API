@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.devtasker.api.auth.dto.LoginRequest;
 import br.com.devtasker.api.auth.dto.LoginResponse;
+import br.com.devtasker.api.exception.EmailNotVerifiedException;
 import br.com.devtasker.api.security.jwt.AccessToken;
 import br.com.devtasker.api.security.jwt.JwtTokenService;
 import br.com.devtasker.api.user.domain.UserAccount;
@@ -48,6 +49,10 @@ public class LoginService {
         UserAccount user = userAccountRepository
                 .findByEmail(normalizedEmail)
                 .orElseThrow();
+
+        if (!user.isEmailVerified()) {
+            throw new EmailNotVerifiedException();
+        }
 
         AccessToken token = jwtTokenService.generate(user);
 

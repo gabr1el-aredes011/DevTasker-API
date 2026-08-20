@@ -7,6 +7,7 @@ import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.devtasker.api.auth.verification.config.EmailVerificationProperties;
 import br.com.devtasker.api.auth.verification.domain.EmailVerificationCode;
 import br.com.devtasker.api.auth.verification.repository.EmailVerificationCodeRepository;
 import br.com.devtasker.api.user.domain.UserAccount;
@@ -23,9 +24,12 @@ public class EmailVerificationService {
 
     private final EmailVerificationCodeService
             emailVerificationCodeService;
-    
+
     private final EmailVerificationDeliveryService
-    emailVerificationDeliveryService;
+            emailVerificationDeliveryService;
+
+    private final EmailVerificationProperties
+            properties;
 
     public EmailVerificationService(
             UserAccountRepository userAccountRepository,
@@ -34,7 +38,8 @@ public class EmailVerificationService {
             EmailVerificationCodeService
                     emailVerificationCodeService,
             EmailVerificationDeliveryService
-                    emailVerificationDeliveryService
+                    emailVerificationDeliveryService,
+            EmailVerificationProperties properties
     ) {
         this.userAccountRepository =
                 userAccountRepository;
@@ -47,6 +52,8 @@ public class EmailVerificationService {
 
         this.emailVerificationDeliveryService =
                 emailVerificationDeliveryService;
+
+        this.properties = properties;
     }
 
     @Transactional
@@ -61,6 +68,10 @@ public class EmailVerificationService {
 
         String normalizedCode =
                 rawCode.trim();
+
+        if (!hasValidCodeFormat(normalizedCode)) {
+            return EmailVerificationResult.INVALID_CODE;
+        }
 
         UserAccount user =
                 userAccountRepository
@@ -106,7 +117,7 @@ public class EmailVerificationService {
          */
         if (
                 verificationCode.hasReachedAttemptLimit(
-                        EmailVerificationPolicy.MAXIMUM_ATTEMPTS
+                        properties.maximumAttempts()
                 )
         ) {
             return EmailVerificationResult.ATTEMPTS_EXHAUSTED;
@@ -135,7 +146,7 @@ public class EmailVerificationService {
              */
             if (
                     verificationCode.hasReachedAttemptLimit(
-                            EmailVerificationPolicy.MAXIMUM_ATTEMPTS
+                            properties.maximumAttempts()
                     )
             ) {
                 return EmailVerificationResult.ATTEMPTS_EXHAUSTED;
@@ -207,8 +218,7 @@ public class EmailVerificationService {
                 existingCode != null &&
                 !existingCode.canBeResentAt(
                         now,
-                        EmailVerificationPolicy
-                                .RESEND_COOLDOWN_SECONDS
+                        properties.resendIntervalSeconds()
                 )
         ) {
             return;
@@ -221,5 +231,17 @@ public class EmailVerificationService {
          */
         emailVerificationDeliveryService
                 .issueAndSend(user);
+    }
+
+    private boolean hasValidCodeFormat(
+            String code
+    ) {
+        if (code.length() != properties.codeLength()) {
+            return false;
+        }
+
+        return code
+                .chars()
+                .allMatch(Character::isDigit);
     }
 }
