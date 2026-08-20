@@ -36,7 +36,7 @@ public class ProjectAccessService {
             Long userId
     ) {
         return projectMemberRepository
-                .findByProject_IdAndUser_Id(
+                .findActiveMembership(
                         projectId,
                         userId
                 )

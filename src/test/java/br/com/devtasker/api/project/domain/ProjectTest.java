@@ -2,9 +2,12 @@ package br.com.devtasker.api.project.domain;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -113,6 +116,36 @@ class ProjectTest {
                 () -> assertEquals(
                         "Interface Angular",
                         project.getDescription()
+                )
+        );
+    }
+
+    @Test
+    void shouldArchiveProjectAndRejectFurtherMutations() {
+        Project project = Project.create(
+                "DevTasker",
+                null,
+                owner
+        );
+
+        assertFalse(project.isArchived());
+        assertNull(project.getArchivedAt());
+
+        project.archive();
+
+        assertAll(
+                () -> assertTrue(project.isArchived()),
+                () -> assertNotNull(project.getArchivedAt()),
+                () -> assertThrows(
+                        IllegalStateException.class,
+                        project::archive
+                ),
+                () -> assertThrows(
+                        IllegalStateException.class,
+                        () -> project.updateDetails(
+                                "Outro nome",
+                                null
+                        )
                 )
         );
     }

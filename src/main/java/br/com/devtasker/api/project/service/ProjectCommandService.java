@@ -112,6 +112,26 @@ public class ProjectCommandService {
         );
     }
 
+    @Transactional
+    public void archive(
+            Long projectId,
+            Long userId
+    ) {
+        ProjectMember membership =
+                projectAccessService
+                        .requireOwnership(
+                                projectId,
+                                userId
+                        );
+
+        Project project =
+                membership.getProject();
+
+        project.archive();
+
+        projectRepository.saveAndFlush(project);
+    }
+
     private ProjectDetailsResponse
     toDetailsResponse(
             Project project,

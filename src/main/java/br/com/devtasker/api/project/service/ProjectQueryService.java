@@ -33,15 +33,27 @@ public class ProjectQueryService {
     @Transactional(readOnly = true)
     public List<ProjectSummaryResponse>
     findProjectsByUser(
-            Long userId
+            Long userId,
+            String query
     ) {
         return projectMemberRepository
-                .findAllByUser_IdOrderByJoinedAtAsc(
-                        userId
+                .findActiveProjectsByUser(
+                        userId,
+                        normalizeQuery(query)
                 )
                 .stream()
                 .map(this::toSummaryResponse)
                 .toList();
+    }
+
+    private String normalizeQuery(
+            String query
+    ) {
+        if (query == null || query.isBlank()) {
+            return null;
+        }
+
+        return query.trim();
     }
 
     @Transactional(readOnly = true)

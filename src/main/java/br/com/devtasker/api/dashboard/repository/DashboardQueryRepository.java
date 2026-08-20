@@ -36,6 +36,7 @@ public class DashboardQueryRepository {
                         SELECT COUNT(membership)
                         FROM ProjectMember membership
                         WHERE membership.user.id = :userId
+                          AND membership.project.archivedAt IS NULL
                         """,
                         Long.class
                 )
@@ -51,7 +52,8 @@ public class DashboardQueryRepository {
                         """
                         SELECT COUNT(board)
                         FROM Board board
-                        WHERE EXISTS (
+                        WHERE board.project.archivedAt IS NULL
+                          AND EXISTS (
                             SELECT membership.id
                             FROM ProjectMember membership
                             WHERE membership.project = board.project
@@ -117,6 +119,7 @@ public class DashboardQueryRepository {
                         FROM Task task
                         JOIN task.column boardColumn
                         WHERE task.archivedAt IS NULL
+                          AND boardColumn.board.project.archivedAt IS NULL
                           AND EXISTS (
                               SELECT membership.id
                               FROM ProjectMember membership
@@ -159,6 +162,7 @@ public class DashboardQueryRepository {
                         FROM ProjectMember membership
                         JOIN FETCH membership.project project
                         WHERE membership.user.id = :userId
+                          AND project.archivedAt IS NULL
                         ORDER BY project.createdAt DESC
                         """,
                         ProjectMember.class
@@ -194,6 +198,7 @@ public class DashboardQueryRepository {
                         FROM Task task
                         JOIN task.column boardColumn
                         WHERE task.archivedAt IS NULL
+                          AND boardColumn.board.project.archivedAt IS NULL
                           AND EXISTS (
                               SELECT membership.id
                               FROM ProjectMember membership
@@ -262,6 +267,8 @@ public class DashboardQueryRepository {
                         JOIN FETCH board.project project
 
                         WHERE task.archivedAt IS NULL
+
+                          AND project.archivedAt IS NULL
 
                           AND boardColumn.category <> :done
 

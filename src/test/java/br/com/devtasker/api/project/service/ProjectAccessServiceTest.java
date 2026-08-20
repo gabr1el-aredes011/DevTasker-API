@@ -43,7 +43,7 @@ class ProjectAccessServiceTest {
     void shouldHideProjectsWithoutMembership() {
         when(
                 projectMemberRepository
-                        .findByProject_IdAndUser_Id(
+                        .findActiveMembership(
                                 PROJECT_ID,
                                 USER_ID
                         )
@@ -126,7 +126,7 @@ class ProjectAccessServiceTest {
     ) {
         when(
                 projectMemberRepository
-                        .findByProject_IdAndUser_Id(
+                        .findActiveMembership(
                                 PROJECT_ID,
                                 USER_ID
                         )

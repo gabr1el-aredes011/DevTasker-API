@@ -48,6 +48,9 @@ public class Project {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Column(name = "archived_at")
+    private OffsetDateTime archivedAt;
+
     private Project(
             String name,
             String description,
@@ -90,8 +93,29 @@ public class Project {
             String name,
             String description
     ) {
+        requireActive();
+
         this.name = normalizeName(name);
         this.description = normalizeDescription(description);
+    }
+
+    public boolean isArchived() {
+        return archivedAt != null;
+    }
+
+    public void archive() {
+        requireActive();
+
+        this.archivedAt =
+                OffsetDateTime.now(ZoneOffset.UTC);
+    }
+
+    private void requireActive() {
+        if (isArchived()) {
+            throw new IllegalStateException(
+                    "O projeto já está arquivado."
+            );
+        }
     }
 
     private static String normalizeName(

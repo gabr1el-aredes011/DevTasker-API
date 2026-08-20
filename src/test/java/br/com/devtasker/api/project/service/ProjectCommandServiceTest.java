@@ -3,6 +3,7 @@ package br.com.devtasker.api.project.service;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -169,6 +170,35 @@ class ProjectCommandServiceTest {
                         response.membershipRole()
                 )
         );
+
+        verify(projectRepository)
+                .saveAndFlush(project);
+    }
+
+    @Test
+    void shouldArchiveProjectWithOwnershipAccess() {
+        Project project = Project.create(
+                "DevTasker",
+                null,
+                owner
+        );
+
+        when(
+                projectAccessService.requireOwnership(
+                        PROJECT_ID,
+                        USER_ID
+                )
+        ).thenReturn(membership);
+
+        when(membership.getProject())
+                .thenReturn(project);
+
+        service.archive(
+                PROJECT_ID,
+                USER_ID
+        );
+
+        assertTrue(project.isArchived());
 
         verify(projectRepository)
                 .saveAndFlush(project);
