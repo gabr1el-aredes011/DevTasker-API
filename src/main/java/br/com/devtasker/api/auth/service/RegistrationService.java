@@ -11,6 +11,7 @@ import br.com.devtasker.api.auth.dto.RegisterResponse;
 import br.com.devtasker.api.auth.verification.service.EmailVerificationDeliveryService;
 import br.com.devtasker.api.auth.verification.service.IssuedEmailVerificationCode;
 import br.com.devtasker.api.exception.EmailAlreadyInUseException;
+import br.com.devtasker.api.project.service.WorkspaceProvisioningService;
 import br.com.devtasker.api.user.domain.UserAccount;
 import br.com.devtasker.api.user.repository.UserAccountRepository;
 
@@ -26,11 +27,16 @@ public class RegistrationService {
     private final EmailVerificationDeliveryService
             emailVerificationDeliveryService;
 
+    private final WorkspaceProvisioningService
+            workspaceProvisioningService;
+
     public RegistrationService(
             UserAccountRepository userAccountRepository,
             PasswordEncoder passwordEncoder,
             EmailVerificationDeliveryService
-                    emailVerificationDeliveryService
+                    emailVerificationDeliveryService,
+            WorkspaceProvisioningService
+                    workspaceProvisioningService
     ) {
         this.userAccountRepository =
                 userAccountRepository;
@@ -40,6 +46,9 @@ public class RegistrationService {
 
         this.emailVerificationDeliveryService =
                 emailVerificationDeliveryService;
+
+        this.workspaceProvisioningService =
+                workspaceProvisioningService;
     }
 
     @Transactional
@@ -80,6 +89,9 @@ public class RegistrationService {
         UserAccount savedUser =
                 userAccountRepository
                         .saveAndFlush(user);
+
+        workspaceProvisioningService
+                .createInitialWorkspace(savedUser);
 
         IssuedEmailVerificationCode issuedCode =
                 emailVerificationDeliveryService
