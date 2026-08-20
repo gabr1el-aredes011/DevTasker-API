@@ -45,6 +45,10 @@ public class JwtTokenService {
                 .claim("user_id", user.getId())
                 .claim("name", user.getName())
                 .claim(
+                        "credential_version",
+                        user.getCredentialVersion()
+                )
+                .claim(
                         "roles",
                         List.of(user.getRole().name())
                 )

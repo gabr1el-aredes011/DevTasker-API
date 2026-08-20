@@ -46,6 +46,9 @@ public class UserAccount {
     @Column(name = "email_verified_at")
     private OffsetDateTime emailVerifiedAt;
 
+    @Column(name = "credential_version", nullable = false)
+    private long credentialVersion = 0L;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -86,6 +89,22 @@ public class UserAccount {
             emailVerifiedAt =
                     OffsetDateTime.now(ZoneOffset.UTC);
         }
+    }
+
+    public void changePassword(
+            String encodedHash
+    ) {
+        if (
+                encodedHash == null ||
+                encodedHash.isBlank()
+        ) {
+            throw new IllegalArgumentException(
+                    "O hash da senha é obrigatório."
+            );
+        }
+
+        this.passwordHash = encodedHash;
+        this.credentialVersion++;
     }
     
     @PrePersist

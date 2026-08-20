@@ -84,7 +84,11 @@ public class SecurityConfig {
                                 "/api/auth/register",
                                 "/api/auth/login",
                                 "/api/auth/email-verification/confirm",
-                                "/api/auth/email-verification/resend"
+                                "/api/auth/email-verification/resend",
+                                "/api/auth/password-recovery/request",
+                                "/api/auth/password-recovery/resend",
+                                "/api/auth/password-recovery/verify",
+                                "/api/auth/password-recovery/reset"
                         )
                         .permitAll()
 
