@@ -39,7 +39,7 @@ class ProjectQueryServiceTest {
     void shouldTrimSearchQuery() {
         when(
                 projectMemberRepository
-                        .findActiveProjectsByUser(
+                        .searchActiveProjectsByUser(
                                 USER_ID,
                                 "API"
                         )
@@ -58,8 +58,7 @@ class ProjectQueryServiceTest {
         when(
                 projectMemberRepository
                         .findActiveProjectsByUser(
-                                USER_ID,
-                                null
+                                USER_ID
                         )
         ).thenReturn(List.of());
 
@@ -70,8 +69,7 @@ class ProjectQueryServiceTest {
 
         verify(projectMemberRepository)
                 .findActiveProjectsByUser(
-                        USER_ID,
-                        null
+                        USER_ID
                 );
     }
 }

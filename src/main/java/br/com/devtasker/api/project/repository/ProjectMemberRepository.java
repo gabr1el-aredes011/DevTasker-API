@@ -18,18 +18,29 @@ public interface ProjectMemberRepository
             JOIN FETCH membership.project project
             WHERE membership.user.id = :userId
               AND project.archivedAt IS NULL
+            ORDER BY project.updatedAt DESC, project.id DESC
+            """)
+    List<ProjectMember> findActiveProjectsByUser(
+            @Param("userId") Long userId
+    );
+
+    @Query("""
+            SELECT membership
+            FROM ProjectMember membership
+            JOIN FETCH membership.project project
+            WHERE membership.user.id = :userId
+              AND project.archivedAt IS NULL
               AND (
-                    :query IS NULL
-                    OR LOWER(project.name) LIKE LOWER(
-                        CONCAT('%', :query, '%')
+                    LOWER(project.name) LIKE CONCAT(
+                        '%', LOWER(:query), '%'
                     )
-                    OR LOWER(COALESCE(project.description, '')) LIKE LOWER(
-                        CONCAT('%', :query, '%')
+                    OR LOWER(COALESCE(project.description, '')) LIKE CONCAT(
+                        '%', LOWER(:query), '%'
                     )
               )
             ORDER BY project.updatedAt DESC, project.id DESC
             """)
-    List<ProjectMember> findActiveProjectsByUser(
+    List<ProjectMember> searchActiveProjectsByUser(
             @Param("userId") Long userId,
             @Param("query") String query
     );

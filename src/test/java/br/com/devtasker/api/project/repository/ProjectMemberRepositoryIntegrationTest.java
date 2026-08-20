@@ -70,8 +70,7 @@ class ProjectMemberRepositoryIntegrationTest {
         List<ProjectMember> allProjects =
                 projectMemberRepository
                         .findActiveProjectsByUser(
-                                owner.getId(),
-                                null
+                                owner.getId()
                         );
 
         assertEquals(
@@ -98,7 +97,7 @@ class ProjectMemberRepositoryIntegrationTest {
 
         List<ProjectMember> searchResult =
                 projectMemberRepository
-                        .findActiveProjectsByUser(
+                        .searchActiveProjectsByUser(
                                 owner.getId(),
                                 "aNgUlAr"
                         );
@@ -122,8 +121,7 @@ class ProjectMemberRepositoryIntegrationTest {
         List<ProjectMember> afterArchive =
                 projectMemberRepository
                         .findActiveProjectsByUser(
-                                owner.getId(),
-                                null
+                                owner.getId()
                         );
 
         assertEquals(1, afterArchive.size());

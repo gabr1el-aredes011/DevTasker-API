@@ -36,11 +36,22 @@ public class ProjectQueryService {
             Long userId,
             String query
     ) {
-        return projectMemberRepository
-                .findActiveProjectsByUser(
-                        userId,
-                        normalizeQuery(query)
-                )
+        String normalizedQuery =
+                normalizeQuery(query);
+
+        List<ProjectMember> memberships =
+                normalizedQuery == null
+                        ? projectMemberRepository
+                                .findActiveProjectsByUser(
+                                        userId
+                                )
+                        : projectMemberRepository
+                                .searchActiveProjectsByUser(
+                                        userId,
+                                        normalizedQuery
+                                );
+
+        return memberships
                 .stream()
                 .map(this::toSummaryResponse)
                 .toList();
