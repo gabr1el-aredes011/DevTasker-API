@@ -25,14 +25,17 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Project {
 
+    private static final int MAX_NAME_LENGTH = 120;
+    private static final int MAX_DESCRIPTION_LENGTH = 1000;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 120)
+    @Column(nullable = false, length = MAX_NAME_LENGTH)
     private String name;
 
-    @Column(length = 1000)
+    @Column(length = MAX_DESCRIPTION_LENGTH)
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -50,17 +53,87 @@ public class Project {
             String description,
             UserAccount owner
     ) {
-        this.name = name;
-        this.description = description;
+        if (owner == null) {
+            throw new IllegalArgumentException(
+                    "O proprietário do projeto é obrigatório."
+            );
+        }
+
+        this.name = normalizeName(name);
+        this.description = normalizeDescription(description);
         this.owner = owner;
     }
 
-    public static Project createInitial(UserAccount owner) {
+    public static Project create(
+            String name,
+            String description,
+            UserAccount owner
+    ) {
         return new Project(
+                name,
+                description,
+                owner
+        );
+    }
+
+    public static Project createInitial(
+            UserAccount owner
+    ) {
+        return create(
                 "Meu Primeiro Projeto",
                 "Projeto inicial criado automaticamente pelo DevTasker.",
                 owner
         );
+    }
+
+    public void updateDetails(
+            String name,
+            String description
+    ) {
+        this.name = normalizeName(name);
+        this.description = normalizeDescription(description);
+    }
+
+    private static String normalizeName(
+            String name
+    ) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException(
+                    "O nome do projeto é obrigatório."
+            );
+        }
+
+        String normalized = name.trim();
+
+        if (normalized.length() > MAX_NAME_LENGTH) {
+            throw new IllegalArgumentException(
+                    "O nome do projeto deve possuir no máximo 120 caracteres."
+            );
+        }
+
+        return normalized;
+    }
+
+    private static String normalizeDescription(
+            String description
+    ) {
+        if (description == null) {
+            return null;
+        }
+
+        String normalized = description.trim();
+
+        if (normalized.isBlank()) {
+            return null;
+        }
+
+        if (normalized.length() > MAX_DESCRIPTION_LENGTH) {
+            throw new IllegalArgumentException(
+                    "A descrição do projeto deve possuir no máximo 1000 caracteres."
+            );
+        }
+
+        return normalized;
     }
 
     @PrePersist
