@@ -75,6 +75,25 @@ public class GlobalExceptionHandler {
                 .body(error);
     }
 
+    @ExceptionHandler(PasswordRecoveryException.class)
+    public ResponseEntity<ApiError> handlePasswordRecovery(
+            PasswordRecoveryException exception,
+            HttpServletRequest request
+    ) {
+        ApiError error = new ApiError(
+                exception.getStatus().value(),
+                exception.getErrorCode(),
+                "Não foi possível concluir a recuperação de senha.",
+                request.getRequestURI(),
+                OffsetDateTime.now(ZoneOffset.UTC),
+                Map.of()
+        );
+
+        return ResponseEntity
+                .status(exception.getStatus())
+                .body(error);
+    }
+
     @ExceptionHandler(EmailDeliveryException.class)
     public ResponseEntity<ApiError> handleEmailDelivery(
             EmailDeliveryException exception,
