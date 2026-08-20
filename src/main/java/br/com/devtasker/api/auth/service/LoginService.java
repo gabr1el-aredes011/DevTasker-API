@@ -1,6 +1,6 @@
 package br.com.devtasker.api.auth.service;
 
-import java.util.Locale;	
+import java.util.Locale;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,7 +14,6 @@ import br.com.devtasker.api.security.jwt.AccessToken;
 import br.com.devtasker.api.security.jwt.JwtTokenService;
 import br.com.devtasker.api.user.domain.UserAccount;
 import br.com.devtasker.api.user.repository.UserAccountRepository;
-
 
 @Service
 public class LoginService {

@@ -1,16 +1,16 @@
 package br.com.devtasker.api.auth.verification.controller;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import br.com.devtasker.api.auth.verification.dto.ResendEmailVerificationRequest;
 import br.com.devtasker.api.auth.verification.dto.VerifyEmailRequest;
 import br.com.devtasker.api.auth.verification.service.EmailVerificationResult;
 import br.com.devtasker.api.auth.verification.service.EmailVerificationService;
-import br.com.devtasker.api.auth.verification.dto.ResendEmailVerificationRequest;
+import br.com.devtasker.api.exception.EmailVerificationException;
 import jakarta.validation.Valid;
 
 @RestController
@@ -42,27 +42,24 @@ public class EmailVerificationController {
 
         return switch (result) {
 
-        case VERIFIED,
-             ALREADY_VERIFIED ->
-                ResponseEntity
-                        .noContent()
-                        .build();
+            case VERIFIED,
+                 ALREADY_VERIFIED ->
+                    ResponseEntity
+                            .noContent()
+                            .build();
 
-        case INVALID_CODE ->
-                ResponseEntity
-                        .badRequest()
-                        .build();
+            case INVALID_CODE ->
+                    throw EmailVerificationException
+                            .invalidCode();
 
-        case EXPIRED ->
-                ResponseEntity
-                        .status(HttpStatus.GONE)
-                        .build();
+            case EXPIRED ->
+                    throw EmailVerificationException
+                            .expiredCode();
 
-        case ATTEMPTS_EXHAUSTED ->
-                ResponseEntity
-                        .status(HttpStatus.TOO_MANY_REQUESTS)
-                        .build();
-    };
+            case ATTEMPTS_EXHAUSTED ->
+                    throw EmailVerificationException
+                            .attemptsExhausted();
+        };
     }
     
     @PostMapping("/resend")
@@ -79,5 +76,4 @@ public class EmailVerificationController {
                 .accepted()
                 .build();
     }
-    
 }
