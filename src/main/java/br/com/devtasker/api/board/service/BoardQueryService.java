@@ -78,7 +78,7 @@ public class BoardQueryService {
                 .getId();
 
         if (!projectMemberRepository
-                .existsByProject_IdAndUser_Id(
+                .existsActiveMembership(
                         projectId,
                         userId
                 )) {
@@ -107,7 +107,7 @@ public class BoardQueryService {
             Long userId
     ) {
         if (!projectMemberRepository
-                .existsByProject_IdAndUser_Id(
+                .existsActiveMembership(
                         projectId,
                         userId
                 )) {
@@ -139,7 +139,7 @@ public class BoardQueryService {
                 .getId();
 
         boolean hasAccess = projectMemberRepository
-                .existsByProject_IdAndUser_Id(
+                .existsActiveMembership(
                         projectId,
                         userId
                 );

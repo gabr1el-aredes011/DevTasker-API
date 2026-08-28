@@ -5,8 +5,8 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import br.com.devtasker.api.exception.ProjectNotFoundException;
 import br.com.devtasker.api.project.domain.ProjectMember;
+import br.com.devtasker.api.project.dto.ProjectDetailsResponse;
 import br.com.devtasker.api.project.dto.ProjectSummaryResponse;
 import br.com.devtasker.api.project.repository.ProjectMemberRepository;
 
@@ -16,22 +16,84 @@ public class ProjectQueryService {
     private final ProjectMemberRepository
             projectMemberRepository;
 
+    private final ProjectAccessService
+            projectAccessService;
+
     public ProjectQueryService(
-            ProjectMemberRepository projectMemberRepository
+            ProjectMemberRepository projectMemberRepository,
+            ProjectAccessService projectAccessService
     ) {
         this.projectMemberRepository =
                 projectMemberRepository;
+
+        this.projectAccessService =
+                projectAccessService;
     }
 
     @Transactional(readOnly = true)
-    public List<ProjectSummaryResponse> findProjectsByUser(
-            Long userId
+    public List<ProjectSummaryResponse>
+    findProjectsByUser(
+            Long userId,
+            String query
     ) {
-        return projectMemberRepository
-                .findAllByUser_IdOrderByJoinedAtAsc(userId)
+        String normalizedQuery =
+                normalizeQuery(query);
+
+        List<ProjectMember> memberships =
+                normalizedQuery == null
+                        ? projectMemberRepository
+                                .findActiveProjectsByUser(
+                                        userId
+                                )
+                        : projectMemberRepository
+                                .searchActiveProjectsByUser(
+                                        userId,
+                                        normalizedQuery
+                                );
+
+        return memberships
                 .stream()
                 .map(this::toSummaryResponse)
                 .toList();
+    }
+
+    private String normalizeQuery(
+            String query
+    ) {
+        if (query == null || query.isBlank()) {
+            return null;
+        }
+
+        return query.trim();
+    }
+
+    @Transactional(readOnly = true)
+    public ProjectDetailsResponse findById(
+            Long projectId,
+            Long userId
+    ) {
+        ProjectMember membership =
+                projectAccessService
+                        .requireMembership(
+                                projectId,
+                                userId
+                        );
+
+        var project =
+                membership.getProject();
+
+        return new ProjectDetailsResponse(
+                project.getId(),
+                project.getName(),
+                project.getDescription(),
+                membership.getRole(),
+
+                project.getOwner().getId(),
+                project.getOwner().getName(),
+
+                project.getCreatedAt(),
+                project.getUpdatedAt()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -39,25 +101,27 @@ public class ProjectQueryService {
             Long projectId,
             Long userId
     ) {
-        projectMemberRepository
-                .findByProject_IdAndUser_Id(
+        projectAccessService
+                .requireMembership(
                         projectId,
                         userId
-                )
-                .orElseThrow(ProjectNotFoundException::new);
+                );
     }
 
-    private ProjectSummaryResponse toSummaryResponse(
+    private ProjectSummaryResponse
+    toSummaryResponse(
             ProjectMember membership
     ) {
-        var project = membership.getProject();
+        var project =
+                membership.getProject();
 
         return new ProjectSummaryResponse(
                 project.getId(),
                 project.getName(),
                 project.getDescription(),
                 membership.getRole(),
-                project.getCreatedAt()
+                project.getCreatedAt(),
+                project.getUpdatedAt()
         );
     }
 }
