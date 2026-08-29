@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.devtasker.api.board.dto.BoardSummaryResponse;
+import br.com.devtasker.api.board.dto.CreateBoardRequest;
+import br.com.devtasker.api.board.service.BoardCommandService;
 import br.com.devtasker.api.board.service.BoardQueryService;
 import br.com.devtasker.api.project.dto.CreateProjectRequest;
 import br.com.devtasker.api.project.dto.ProjectDetailsResponse;
@@ -40,10 +42,14 @@ public class ProjectController {
     private final BoardQueryService
             boardQueryService;
 
+    private final BoardCommandService
+            boardCommandService;
+
     public ProjectController(
             ProjectQueryService projectQueryService,
             ProjectCommandService projectCommandService,
-            BoardQueryService boardQueryService
+            BoardQueryService boardQueryService,
+            BoardCommandService boardCommandService
     ) {
         this.projectQueryService =
                 projectQueryService;
@@ -53,6 +59,9 @@ public class ProjectController {
 
         this.boardQueryService =
                 boardQueryService;
+
+        this.boardCommandService =
+                boardCommandService;
     }
 
     @GetMapping
@@ -139,6 +148,20 @@ public class ProjectController {
                         projectId,
                         extractUserId(jwt)
                 );
+    }
+
+    @PostMapping("/{projectId}/boards")
+    @ResponseStatus(HttpStatus.CREATED)
+    public BoardSummaryResponse createBoard(
+            @PathVariable Long projectId,
+            @Valid @RequestBody CreateBoardRequest request,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return boardCommandService.create(
+                projectId,
+                extractUserId(jwt),
+                request
+        );
     }
 
     private Long extractUserId(

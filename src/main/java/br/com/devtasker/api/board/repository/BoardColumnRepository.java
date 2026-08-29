@@ -1,6 +1,7 @@
 package br.com.devtasker.api.board.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -11,5 +12,10 @@ public interface BoardColumnRepository
 
     List<BoardColumn> findAllByBoard_IdOrderByPositionAsc(
             Long boardId
+    );
+
+    Optional<BoardColumn>
+    findByIdAndBoard_ArchivedAtIsNull(
+            Long columnId
     );
 }

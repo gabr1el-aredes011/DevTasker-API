@@ -199,6 +199,25 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(error);
     }
+
+    @ExceptionHandler(BoardNameAlreadyInUseException.class)
+    public ResponseEntity<ApiError> handleBoardNameAlreadyInUse(
+            BoardNameAlreadyInUseException exception,
+            HttpServletRequest request
+    ) {
+        ApiError error = new ApiError(
+                HttpStatus.CONFLICT.value(),
+                "BOARD_NAME_ALREADY_IN_USE",
+                exception.getMessage(),
+                request.getRequestURI(),
+                OffsetDateTime.now(ZoneOffset.UTC),
+                Map.of()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(error);
+    }
     
     @ExceptionHandler(ProjectPermissionDeniedException.class)
     public ResponseEntity<ApiError> handleProjectPermissionDenied(

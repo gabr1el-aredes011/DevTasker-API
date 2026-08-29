@@ -8,13 +8,13 @@ import java.util.Map;
 import org.springframework.stereotype.Repository;
 
 import br.com.devtasker.api.board.domain.BoardColumnCategory;
+import br.com.devtasker.api.dashboard.dto.DashboardAttentionTaskResponse;
 import br.com.devtasker.api.dashboard.dto.DashboardRecentProjectResponse;
 import br.com.devtasker.api.dashboard.dto.DashboardTaskMetricsResponse;
 import br.com.devtasker.api.dashboard.dto.DashboardWorkflowResponse;
 import br.com.devtasker.api.project.domain.ProjectMember;
 import br.com.devtasker.api.task.domain.Task;
 import br.com.devtasker.api.task.domain.TaskPriority;
-import br.com.devtasker.api.dashboard.dto.DashboardAttentionTaskResponse;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
@@ -53,6 +53,7 @@ public class DashboardQueryRepository {
                         SELECT COUNT(board)
                         FROM Board board
                         WHERE board.project.archivedAt IS NULL
+                          AND board.archivedAt IS NULL
                           AND EXISTS (
                             SELECT membership.id
                             FROM ProjectMember membership
@@ -119,6 +120,7 @@ public class DashboardQueryRepository {
                         FROM Task task
                         JOIN task.column boardColumn
                         WHERE task.archivedAt IS NULL
+                          AND boardColumn.board.archivedAt IS NULL
                           AND boardColumn.board.project.archivedAt IS NULL
                           AND EXISTS (
                               SELECT membership.id
@@ -198,6 +200,7 @@ public class DashboardQueryRepository {
                         FROM Task task
                         JOIN task.column boardColumn
                         WHERE task.archivedAt IS NULL
+                          AND boardColumn.board.archivedAt IS NULL
                           AND boardColumn.board.project.archivedAt IS NULL
                           AND EXISTS (
                               SELECT membership.id
@@ -267,6 +270,8 @@ public class DashboardQueryRepository {
                         JOIN FETCH board.project project
 
                         WHERE task.archivedAt IS NULL
+
+                          AND board.archivedAt IS NULL
 
                           AND project.archivedAt IS NULL
 

@@ -20,6 +20,7 @@ import br.com.devtasker.api.board.repository.BoardRepository;
 import br.com.devtasker.api.board.service.BoardQueryService;
 import br.com.devtasker.api.exception.BoardNotFoundException;
 import br.com.devtasker.api.exception.ProjectNotFoundException;
+import br.com.devtasker.api.exception.TaskNotFoundException;
 import br.com.devtasker.api.project.domain.Project;
 import br.com.devtasker.api.project.domain.ProjectMember;
 import br.com.devtasker.api.project.repository.ProjectMemberRepository;
@@ -134,6 +135,111 @@ class DashboardQueryRepositoryIntegrationTest {
                 project.getId(),
                 board.getId(),
                 task.getId()
+        );
+    }
+
+    @Test
+    void shouldExcludeArchivedBoardAndItsTasksWhileKeepingProjectVisible() {
+        UserAccount owner = userAccountRepository.saveAndFlush(
+                UserAccount.create(
+                        "Gabriel",
+                        "gabriel.archived-board@devtasker.test",
+                        "encoded-password"
+                )
+        );
+
+        Project project = projectRepository.saveAndFlush(
+                Project.create(
+                        "Boards 2.0",
+                        "Projeto ativo",
+                        owner
+                )
+        );
+
+        projectMemberRepository.saveAndFlush(
+                ProjectMember.createOwner(
+                        project,
+                        owner
+                )
+        );
+
+        Board board = boardRepository.saveAndFlush(
+                Board.createInitial(project)
+        );
+
+        BoardColumn column = boardColumnRepository.saveAndFlush(
+                BoardColumn.create(
+                        board,
+                        "Backlog",
+                        BoardColumnCategory.BACKLOG,
+                        0
+                )
+        );
+
+        Task task = taskRepository.saveAndFlush(
+                Task.create(
+                        column,
+                        owner,
+                        "Validar arquivamento",
+                        null,
+                        TaskPriority.HIGH,
+                        LocalDate.now().plusDays(1),
+                        0
+                )
+        );
+
+        assertVisibleDashboard(owner.getId());
+
+        board.archive();
+        boardRepository.saveAndFlush(board);
+        entityManager.clear();
+
+        assertEquals(
+                1L,
+                dashboardQueryRepository.countProjectsByUser(owner.getId())
+        );
+        assertEquals(
+                0L,
+                dashboardQueryRepository.countBoardsByUser(owner.getId())
+        );
+        assertEquals(
+                0L,
+                dashboardQueryRepository
+                        .findTaskMetrics(owner.getId(), LocalDate.now())
+                        .total()
+        );
+        assertEquals(
+                1,
+                dashboardQueryRepository.findRecentProjects(owner.getId()).size()
+        );
+        assertEquals(
+                0L,
+                dashboardQueryRepository.findWorkflow(owner.getId()).backlog()
+        );
+        assertTrue(
+                dashboardQueryRepository
+                        .findAttentionTasks(owner.getId(), LocalDate.now())
+                        .isEmpty()
+        );
+
+        assertTrue(
+                boardQueryService
+                        .findBoardsByProject(project.getId(), owner.getId())
+                        .isEmpty()
+        );
+        assertThrows(
+                BoardNotFoundException.class,
+                () -> boardQueryService.findKanbanByBoardId(
+                        board.getId(),
+                        owner.getId()
+                )
+        );
+        assertThrows(
+                TaskNotFoundException.class,
+                () -> taskService.findById(
+                        task.getId(),
+                        owner.getId()
+                )
         );
     }
 
