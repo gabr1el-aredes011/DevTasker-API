@@ -85,6 +85,17 @@ public class BoardController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/{boardId}/default")
+    public BoardSummaryResponse setDefault(
+            @PathVariable Long boardId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return boardCommandService.setDefault(
+                boardId,
+                extractUserId(jwt)
+        );
+    }
+
     private Long extractUserId(Jwt jwt) {
         Number userId = jwt.getClaim("user_id");
         return userId.longValue();

@@ -13,6 +13,7 @@ import br.com.devtasker.api.exception.BoardNameAlreadyInUseException;
 import br.com.devtasker.api.exception.BoardNotFoundException;
 import br.com.devtasker.api.exception.ProjectNotFoundException;
 import br.com.devtasker.api.project.domain.Project;
+import br.com.devtasker.api.project.repository.ProjectRepository;
 import br.com.devtasker.api.project.service.ProjectAccessService;
 
 @Service
@@ -21,15 +22,18 @@ public class BoardCommandService {
     private final BoardRepository boardRepository;
     private final ProjectAccessService projectAccessService;
     private final BoardWorkflowProvisioningService provisioningService;
+    private final ProjectRepository projectRepository;
 
     public BoardCommandService(
             BoardRepository boardRepository,
             ProjectAccessService projectAccessService,
-            BoardWorkflowProvisioningService provisioningService
+            BoardWorkflowProvisioningService provisioningService,
+            ProjectRepository projectRepository
     ) {
         this.boardRepository = boardRepository;
         this.projectAccessService = projectAccessService;
         this.provisioningService = provisioningService;
+        this.projectRepository = projectRepository;
     }
 
     @Transactional
@@ -38,16 +42,26 @@ public class BoardCommandService {
             Long userId,
             CreateBoardRequest request
     ) {
-        Project project = projectAccessService
-                .requireManagementAccess(projectId, userId)
-                .getProject();
+        projectAccessService.requireManagementAccess(projectId, userId);
+
+        Project project = projectRepository
+                .findActiveByIdForUpdate(projectId)
+                .orElseThrow(ProjectNotFoundException::new);
 
         String name = normalizeName(request.name());
         requireAvailableName(projectId, name);
 
         try {
+            boolean requiresDefault = boardRepository
+                    .findByProject_IdAndDefaultBoardTrueAndArchivedAtIsNull(
+                            projectId
+                    )
+                    .isEmpty();
+
             return toSummary(
-                    provisioningService.createBoard(project, name)
+                    requiresDefault
+                            ? provisioningService.createDefaultBoard(project, name)
+                            : provisioningService.createBoard(project, name)
             );
         } catch (DataIntegrityViolationException exception) {
             throw new BoardNameAlreadyInUseException();
@@ -83,16 +97,78 @@ public class BoardCommandService {
             Long boardId,
             Long userId
     ) {
-        Board board = findActiveForUpdate(boardId);
+        Board board = findActive(boardId);
+        Long projectId = board.getProject().getId();
+
         requireBoardManagement(board, userId);
+        lockProjectForBoard(projectId);
+
+        board = findActiveForUpdate(boardId);
+        boolean wasDefault = board.isDefaultBoard();
 
         board.archive();
         boardRepository.saveAndFlush(board);
+
+        if (wasDefault) {
+            boardRepository
+                    .findFirstByProject_IdAndArchivedAtIsNullOrderByIdAsc(
+                            projectId
+                    )
+                    .ifPresent(this::markAsDefault);
+        }
+    }
+
+    @Transactional
+    public BoardSummaryResponse setDefault(
+            Long boardId,
+            Long userId
+    ) {
+        Board requestedBoard = findActive(boardId);
+        Long projectId = requestedBoard.getProject().getId();
+
+        requireBoardManagement(requestedBoard, userId);
+        lockProjectForBoard(projectId);
+
+        Board board = findActiveForUpdate(boardId);
+
+        if (board.isDefaultBoard()) {
+            return toSummary(board);
+        }
+
+        boardRepository
+                .findByProject_IdAndDefaultBoardTrueAndArchivedAtIsNull(
+                        projectId
+                )
+                .ifPresent(this::clearDefault);
+
+        board.markAsDefault();
+
+        return toSummary(boardRepository.saveAndFlush(board));
+    }
+
+    private Board findActive(Long boardId) {
+        return boardRepository.findByIdAndArchivedAtIsNull(boardId)
+                .orElseThrow(BoardNotFoundException::new);
     }
 
     private Board findActiveForUpdate(Long boardId) {
         return boardRepository.findActiveByIdForUpdate(boardId)
                 .orElseThrow(BoardNotFoundException::new);
+    }
+
+    private void lockProjectForBoard(Long projectId) {
+        projectRepository.findActiveByIdForUpdate(projectId)
+                .orElseThrow(BoardNotFoundException::new);
+    }
+
+    private void clearDefault(Board board) {
+        board.clearDefault();
+        boardRepository.saveAndFlush(board);
+    }
+
+    private void markAsDefault(Board board) {
+        board.markAsDefault();
+        boardRepository.saveAndFlush(board);
     }
 
     private void requireBoardManagement(
@@ -130,7 +206,8 @@ public class BoardCommandService {
         return new BoardSummaryResponse(
                 board.getId(),
                 board.getProject().getId(),
-                board.getName()
+                board.getName(),
+                board.isDefaultBoard()
         );
     }
 }

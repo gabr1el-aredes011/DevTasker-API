@@ -14,7 +14,7 @@ import jakarta.persistence.LockModeType;
 public interface BoardRepository
         extends JpaRepository<Board, Long> {
 
-    List<Board> findAllByProject_IdAndArchivedAtIsNullOrderByIdAsc(
+    List<Board> findAllByProject_IdAndArchivedAtIsNullOrderByDefaultBoardDescIdAsc(
             Long projectId
     );
 
@@ -25,6 +25,14 @@ public interface BoardRepository
     boolean existsByProject_IdAndArchivedAtIsNullAndNameIgnoreCase(
             Long projectId,
             String name
+    );
+
+    Optional<Board> findByProject_IdAndDefaultBoardTrueAndArchivedAtIsNull(
+            Long projectId
+    );
+
+    Optional<Board> findFirstByProject_IdAndArchivedAtIsNullOrderByIdAsc(
+            Long projectId
     );
     
     @Lock(LockModeType.PESSIMISTIC_WRITE)

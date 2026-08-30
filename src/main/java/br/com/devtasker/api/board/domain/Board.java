@@ -47,6 +47,9 @@ public class Board {
     @Column(name = "archived_at")
     private OffsetDateTime archivedAt;
 
+    @Column(name = "is_default", nullable = false)
+    private boolean defaultBoard;
+
     private Board(Project project, String name) {
         if (project == null) {
             throw new IllegalArgumentException(
@@ -66,15 +69,27 @@ public class Board {
     }
 
     public static Board createInitial(Project project) {
-        return create(
+        Board board = create(
                 project,
                 "Quadro Principal"
         );
+
+        board.markAsDefault();
+        return board;
     }
 
     public void updateName(String name) {
         requireActive();
         this.name = normalizeName(name);
+    }
+
+    public void markAsDefault() {
+        requireActive();
+        this.defaultBoard = true;
+    }
+
+    public void clearDefault() {
+        this.defaultBoard = false;
     }
 
     public boolean isArchived() {
@@ -83,6 +98,7 @@ public class Board {
 
     public void archive() {
         requireActive();
+        clearDefault();
         this.archivedAt = OffsetDateTime.now(ZoneOffset.UTC);
     }
 

@@ -29,8 +29,37 @@ public class BoardWorkflowProvisioningService {
             Project project,
             String name
     ) {
+        return createBoard(
+                project,
+                name,
+                false
+        );
+    }
+
+    public Board createDefaultBoard(
+            Project project,
+            String name
+    ) {
+        return createBoard(
+                project,
+                name,
+                true
+        );
+    }
+
+    private Board createBoard(
+            Project project,
+            String name,
+            boolean defaultBoard
+    ) {
+        Board newBoard = Board.create(project, name);
+
+        if (defaultBoard) {
+            newBoard.markAsDefault();
+        }
+
         Board board = boardRepository.saveAndFlush(
-                Board.create(project, name)
+                newBoard
         );
 
         boardColumnRepository.saveAll(

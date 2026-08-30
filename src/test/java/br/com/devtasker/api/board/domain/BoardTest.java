@@ -1,6 +1,7 @@
 package br.com.devtasker.api.board.domain;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -38,14 +39,23 @@ class BoardTest {
     @Test
     void shouldArchiveOnlyOnce() {
         Board board = Board.create(project, "Produto");
+        board.markAsDefault();
 
         board.archive();
 
         assertTrue(board.isArchived());
+        assertFalse(board.isDefaultBoard());
         assertThrows(IllegalStateException.class, board::archive);
         assertThrows(
                 IllegalStateException.class,
                 () -> board.updateName("Novo nome")
         );
+    }
+
+    @Test
+    void shouldCreateInitialBoardAsDefault() {
+        Board board = Board.createInitial(project);
+
+        assertTrue(board.isDefaultBoard());
     }
 }
