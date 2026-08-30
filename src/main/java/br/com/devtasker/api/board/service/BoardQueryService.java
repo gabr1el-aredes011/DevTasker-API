@@ -53,12 +53,13 @@ public class BoardQueryService {
         validateProjectMembership(projectId, userId);
 
         return boardRepository
-                .findAllByProject_IdAndArchivedAtIsNullOrderByIdAsc(projectId)
+                .findAllByProject_IdAndArchivedAtIsNullOrderByDefaultBoardDescIdAsc(projectId)
                 .stream()
                 .map(board -> new BoardSummaryResponse(
                         board.getId(),
                         board.getProject().getId(),
-                        board.getName()
+                        board.getName(),
+                        board.isDefaultBoard()
                 ))
                 .toList();
     }

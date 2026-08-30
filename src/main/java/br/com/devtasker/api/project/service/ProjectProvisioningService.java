@@ -38,7 +38,7 @@ public class ProjectProvisioningService {
                 )
         );
 
-        boardWorkflowProvisioningService.createBoard(
+        boardWorkflowProvisioningService.createDefaultBoard(
                 project,
                 "Quadro Principal"
         );

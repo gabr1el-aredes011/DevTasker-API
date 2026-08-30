@@ -81,4 +81,17 @@ class BoardControllerTest {
                 USER_ID
         );
     }
+
+    @Test
+    void shouldSetBoardAsDefaultForAuthenticatedUser() {
+        controller.setDefault(
+                BOARD_ID,
+                jwt
+        );
+
+        verify(boardCommandService).setDefault(
+                BOARD_ID,
+                USER_ID
+        );
+    }
 }

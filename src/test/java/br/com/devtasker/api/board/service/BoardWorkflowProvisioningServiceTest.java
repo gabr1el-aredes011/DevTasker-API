@@ -1,6 +1,8 @@
 package br.com.devtasker.api.board.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -64,9 +66,21 @@ class BoardWorkflowProvisioningServiceTest {
         List<BoardColumn> columns = columnsCaptor.getValue();
 
         assertEquals("Roadmap", board.getName());
+        assertFalse(board.isDefaultBoard());
         assertEquals(5, columns.size());
         assertEquals(BoardColumnCategory.BACKLOG, columns.get(0).getCategory());
         assertEquals(BoardColumnCategory.DONE, columns.get(4).getCategory());
         assertEquals(4, columns.get(4).getPosition());
+    }
+
+    @Test
+    void shouldCreateDefaultBoardWithStandardWorkflow() {
+        Board board = service.createDefaultBoard(
+                project,
+                "Principal"
+        );
+
+        assertTrue(board.isDefaultBoard());
+        verify(boardColumnRepository).saveAll(any());
     }
 }
