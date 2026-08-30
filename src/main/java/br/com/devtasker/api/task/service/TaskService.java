@@ -1,30 +1,28 @@
 package br.com.devtasker.api.task.service;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.devtasker.api.board.domain.BoardColumn;
 import br.com.devtasker.api.board.repository.BoardColumnRepository;
+import br.com.devtasker.api.board.repository.BoardRepository;
 import br.com.devtasker.api.exception.BoardColumnNotFoundException;
+import br.com.devtasker.api.exception.BoardNotFoundException;
+import br.com.devtasker.api.exception.InvalidTaskMoveException;
 import br.com.devtasker.api.exception.TaskNotFoundException;
 import br.com.devtasker.api.project.service.ProjectAccessService;
 import br.com.devtasker.api.task.domain.Task;
 import br.com.devtasker.api.task.dto.CreateTaskRequest;
+import br.com.devtasker.api.task.dto.MoveTaskRequest;
 import br.com.devtasker.api.task.dto.TaskResponse;
 import br.com.devtasker.api.task.dto.TaskUserSummaryResponse;
+import br.com.devtasker.api.task.dto.UpdateTaskRequest;
 import br.com.devtasker.api.task.repository.TaskRepository;
 import br.com.devtasker.api.user.domain.UserAccount;
 import br.com.devtasker.api.user.repository.UserAccountRepository;
-import br.com.devtasker.api.task.dto.UpdateTaskRequest;
-
-
-import br.com.devtasker.api.board.repository.BoardRepository;
-import br.com.devtasker.api.exception.BoardNotFoundException;
-import br.com.devtasker.api.exception.InvalidTaskMoveException;
-import br.com.devtasker.api.task.dto.MoveTaskRequest;
 
 @Service
 public class TaskService {
@@ -138,7 +136,9 @@ public class TaskService {
 
     private BoardColumn findColumn(Long columnId) {
         return boardColumnRepository
-                .findById(columnId)
+                .findByIdAndBoard_ArchivedAtIsNull(
+                        columnId
+                )
                 .orElseThrow(
                         BoardColumnNotFoundException::new
                 );
@@ -267,7 +267,7 @@ public class TaskService {
     
     private Task findActiveTask(Long taskId) {
         return taskRepository
-                .findByIdAndArchivedAtIsNull(taskId)
+                .findActiveById(taskId)
                 .orElseThrow(TaskNotFoundException::new);
     }
     @Transactional
@@ -305,7 +305,7 @@ public class TaskService {
         );
 
         boardRepository
-                .findByIdForUpdate(boardId)
+                .findActiveByIdForUpdate(boardId)
                 .orElseThrow(BoardNotFoundException::new);
 
         Task task = findActiveTask(taskId);

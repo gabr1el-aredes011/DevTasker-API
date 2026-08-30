@@ -15,7 +15,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 
+import br.com.devtasker.api.board.dto.CreateBoardRequest;
 import br.com.devtasker.api.board.service.BoardQueryService;
+import br.com.devtasker.api.board.service.BoardCommandService;
 import br.com.devtasker.api.project.service.ProjectCommandService;
 import br.com.devtasker.api.project.service.ProjectQueryService;
 
@@ -35,6 +37,9 @@ class ProjectControllerTest {
     private BoardQueryService boardQueryService;
 
     @Mock
+    private BoardCommandService boardCommandService;
+
+    @Mock
     private Jwt jwt;
 
     private ProjectController controller;
@@ -44,7 +49,8 @@ class ProjectControllerTest {
         controller = new ProjectController(
                 projectQueryService,
                 projectCommandService,
-                boardQueryService
+                boardQueryService,
+                boardCommandService
         );
 
         when(jwt.getClaim("user_id"))
@@ -90,5 +96,23 @@ class ProjectControllerTest {
                         PROJECT_ID,
                         USER_ID
                 );
+    }
+
+    @Test
+    void shouldCreateBoardInsideProjectForAuthenticatedUser() {
+        CreateBoardRequest request =
+                new CreateBoardRequest("Roadmap");
+
+        controller.createBoard(
+                PROJECT_ID,
+                request,
+                jwt
+        );
+
+        verify(boardCommandService).create(
+                PROJECT_ID,
+                USER_ID,
+                request
+        );
     }
 }

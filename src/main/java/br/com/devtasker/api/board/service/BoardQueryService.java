@@ -1,6 +1,9 @@
 package br.com.devtasker.api.board.service;
 
-import java.util.List;	
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,18 +13,14 @@ import br.com.devtasker.api.board.domain.BoardColumn;
 import br.com.devtasker.api.board.dto.BoardColumnResponse;
 import br.com.devtasker.api.board.dto.BoardDetailsResponse;
 import br.com.devtasker.api.board.dto.BoardSummaryResponse;
+import br.com.devtasker.api.board.dto.KanbanBoardResponse;
+import br.com.devtasker.api.board.dto.KanbanColumnResponse;
+import br.com.devtasker.api.board.dto.KanbanTaskResponse;
 import br.com.devtasker.api.board.repository.BoardColumnRepository;
 import br.com.devtasker.api.board.repository.BoardRepository;
 import br.com.devtasker.api.exception.BoardNotFoundException;
 import br.com.devtasker.api.exception.ProjectNotFoundException;
 import br.com.devtasker.api.project.repository.ProjectMemberRepository;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-
-import br.com.devtasker.api.board.dto.KanbanBoardResponse;
-import br.com.devtasker.api.board.dto.KanbanColumnResponse;
-import br.com.devtasker.api.board.dto.KanbanTaskResponse;
 import br.com.devtasker.api.task.domain.Task;
 import br.com.devtasker.api.task.repository.TaskRepository;
 
@@ -54,7 +53,7 @@ public class BoardQueryService {
         validateProjectMembership(projectId, userId);
 
         return boardRepository
-                .findAllByProject_IdOrderByIdAsc(projectId)
+                .findAllByProject_IdAndArchivedAtIsNullOrderByIdAsc(projectId)
                 .stream()
                 .map(board -> new BoardSummaryResponse(
                         board.getId(),
@@ -70,7 +69,7 @@ public class BoardQueryService {
             Long userId
     ) {
         Board board = boardRepository
-                .findById(boardId)
+                .findByIdAndArchivedAtIsNull(boardId)
                 .orElseThrow(BoardNotFoundException::new);
 
         Long projectId = board
@@ -131,7 +130,7 @@ public class BoardQueryService {
             Long userId
     ) {
         Board board = boardRepository
-                .findById(boardId)
+                .findByIdAndArchivedAtIsNull(boardId)
                 .orElseThrow(BoardNotFoundException::new);
 
         Long projectId = board

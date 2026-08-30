@@ -25,6 +25,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Board {
 
+    private static final int MAX_NAME_LENGTH = 120;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -33,7 +35,7 @@ public class Board {
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
-    @Column(nullable = false, length = 120)
+    @Column(nullable = false, length = MAX_NAME_LENGTH)
     private String name;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -42,16 +44,72 @@ public class Board {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Column(name = "archived_at")
+    private OffsetDateTime archivedAt;
+
     private Board(Project project, String name) {
+        if (project == null) {
+            throw new IllegalArgumentException(
+                    "O projeto do quadro é obrigatório."
+            );
+        }
+
         this.project = project;
-        this.name = name;
+        this.name = normalizeName(name);
+    }
+
+    public static Board create(
+            Project project,
+            String name
+    ) {
+        return new Board(project, name);
     }
 
     public static Board createInitial(Project project) {
-        return new Board(
+        return create(
                 project,
                 "Quadro Principal"
         );
+    }
+
+    public void updateName(String name) {
+        requireActive();
+        this.name = normalizeName(name);
+    }
+
+    public boolean isArchived() {
+        return archivedAt != null;
+    }
+
+    public void archive() {
+        requireActive();
+        this.archivedAt = OffsetDateTime.now(ZoneOffset.UTC);
+    }
+
+    private void requireActive() {
+        if (isArchived()) {
+            throw new IllegalStateException(
+                    "O quadro já está arquivado."
+            );
+        }
+    }
+
+    private static String normalizeName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException(
+                    "O nome do quadro é obrigatório."
+            );
+        }
+
+        String normalized = name.trim();
+
+        if (normalized.length() > MAX_NAME_LENGTH) {
+            throw new IllegalArgumentException(
+                    "O nome do quadro deve possuir no máximo 120 caracteres."
+            );
+        }
+
+        return normalized;
     }
 
     @PrePersist

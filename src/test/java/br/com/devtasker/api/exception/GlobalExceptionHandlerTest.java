@@ -138,4 +138,33 @@ class GlobalExceptionHandlerTest {
                 )
         );
     }
+
+    @Test
+    void shouldReturnConflictWhenActiveBoardNameIsAlreadyInUse() {
+        when(request.getRequestURI())
+                .thenReturn("/api/projects/11/boards");
+
+        ResponseEntity<ApiError> response =
+                handler.handleBoardNameAlreadyInUse(
+                        new BoardNameAlreadyInUseException(),
+                        request
+                );
+
+        ApiError error = response.getBody();
+
+        assertAll(
+                () -> assertEquals(
+                        HttpStatus.CONFLICT,
+                        response.getStatusCode()
+                ),
+                () -> assertEquals(
+                        "BOARD_NAME_ALREADY_IN_USE",
+                        error.error()
+                ),
+                () -> assertEquals(
+                        "/api/projects/11/boards",
+                        error.path()
+                )
+        );
+    }
 }
