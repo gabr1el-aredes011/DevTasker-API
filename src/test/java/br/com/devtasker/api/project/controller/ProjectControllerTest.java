@@ -19,6 +19,7 @@ import br.com.devtasker.api.board.dto.CreateBoardRequest;
 import br.com.devtasker.api.board.service.BoardQueryService;
 import br.com.devtasker.api.board.service.BoardCommandService;
 import br.com.devtasker.api.project.service.ProjectCommandService;
+import br.com.devtasker.api.project.service.ProjectMemberQueryService;
 import br.com.devtasker.api.project.service.ProjectQueryService;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,6 +41,9 @@ class ProjectControllerTest {
     private BoardCommandService boardCommandService;
 
     @Mock
+    private ProjectMemberQueryService projectMemberQueryService;
+
+    @Mock
     private Jwt jwt;
 
     private ProjectController controller;
@@ -50,7 +54,8 @@ class ProjectControllerTest {
                 projectQueryService,
                 projectCommandService,
                 boardQueryService,
-                boardCommandService
+                boardCommandService,
+                projectMemberQueryService
         );
 
         when(jwt.getClaim("user_id"))
@@ -113,6 +118,26 @@ class ProjectControllerTest {
                 PROJECT_ID,
                 USER_ID,
                 request
+        );
+    }
+
+    @Test
+    void shouldListProjectMembersForAuthenticatedUser() {
+        when(
+                projectMemberQueryService.findMembers(
+                        PROJECT_ID,
+                        USER_ID
+                )
+        ).thenReturn(List.of());
+
+        controller.findProjectMembers(
+                PROJECT_ID,
+                jwt
+        );
+
+        verify(projectMemberQueryService).findMembers(
+                PROJECT_ID,
+                USER_ID
         );
     }
 }

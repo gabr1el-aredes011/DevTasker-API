@@ -15,6 +15,17 @@ public interface ProjectMemberRepository
     @Query("""
             SELECT membership
             FROM ProjectMember membership
+            JOIN FETCH membership.user
+            WHERE membership.project.id = :projectId
+              AND membership.project.archivedAt IS NULL
+            """)
+    List<ProjectMember> findActiveMembersByProject(
+            @Param("projectId") Long projectId
+    );
+
+    @Query("""
+            SELECT membership
+            FROM ProjectMember membership
             JOIN FETCH membership.project project
             WHERE membership.user.id = :userId
               AND project.archivedAt IS NULL

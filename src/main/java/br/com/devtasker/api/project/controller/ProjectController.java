@@ -23,9 +23,11 @@ import br.com.devtasker.api.board.service.BoardCommandService;
 import br.com.devtasker.api.board.service.BoardQueryService;
 import br.com.devtasker.api.project.dto.CreateProjectRequest;
 import br.com.devtasker.api.project.dto.ProjectDetailsResponse;
+import br.com.devtasker.api.project.dto.ProjectMemberSummaryResponse;
 import br.com.devtasker.api.project.dto.ProjectSummaryResponse;
 import br.com.devtasker.api.project.dto.UpdateProjectRequest;
 import br.com.devtasker.api.project.service.ProjectCommandService;
+import br.com.devtasker.api.project.service.ProjectMemberQueryService;
 import br.com.devtasker.api.project.service.ProjectQueryService;
 import jakarta.validation.Valid;
 
@@ -45,11 +47,15 @@ public class ProjectController {
     private final BoardCommandService
             boardCommandService;
 
+    private final ProjectMemberQueryService
+            projectMemberQueryService;
+
     public ProjectController(
             ProjectQueryService projectQueryService,
             ProjectCommandService projectCommandService,
             BoardQueryService boardQueryService,
-            BoardCommandService boardCommandService
+            BoardCommandService boardCommandService,
+            ProjectMemberQueryService projectMemberQueryService
     ) {
         this.projectQueryService =
                 projectQueryService;
@@ -62,6 +68,9 @@ public class ProjectController {
 
         this.boardCommandService =
                 boardCommandService;
+
+        this.projectMemberQueryService =
+                projectMemberQueryService;
     }
 
     @GetMapping
@@ -161,6 +170,18 @@ public class ProjectController {
                 projectId,
                 extractUserId(jwt),
                 request
+        );
+    }
+
+    @GetMapping("/{projectId}/members")
+    public List<ProjectMemberSummaryResponse>
+    findProjectMembers(
+            @PathVariable Long projectId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return projectMemberQueryService.findMembers(
+                projectId,
+                extractUserId(jwt)
         );
     }
 
