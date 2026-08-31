@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -63,5 +64,17 @@ public interface TaskRepository
             """)
     List<Task> findAllActiveByBoardId(
             @Param("boardId") Long boardId
+    );
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            UPDATE Task task
+            SET task.assignee = null
+            WHERE task.column.board.project.id = :projectId
+              AND task.assignee.id = :userId
+            """)
+    int clearAssigneeByProjectAndUser(
+            @Param("projectId") Long projectId,
+            @Param("userId") Long userId
     );
 }

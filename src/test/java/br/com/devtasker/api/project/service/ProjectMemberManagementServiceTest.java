@@ -20,6 +20,7 @@ import br.com.devtasker.api.project.domain.ProjectMemberRole;
 import br.com.devtasker.api.project.dto.UpdateProjectMemberRoleRequest;
 import br.com.devtasker.api.project.repository.ProjectMemberRepository;
 import br.com.devtasker.api.user.domain.UserAccount;
+import br.com.devtasker.api.task.repository.TaskRepository;
 
 @ExtendWith(MockitoExtension.class)
 class ProjectMemberManagementServiceTest {
@@ -31,12 +32,13 @@ class ProjectMemberManagementServiceTest {
     @Mock private Project project;
     @Mock private UserAccount actorUser;
     @Mock private UserAccount targetUser;
+    @Mock private TaskRepository taskRepository;
 
     private ProjectMemberManagementService service;
 
     @BeforeEach
     void setUp() {
-        service = new ProjectMemberManagementService(repository, accessService);
+        service = new ProjectMemberManagementService(repository, accessService, taskRepository);
     }
 
     @Test
@@ -76,6 +78,30 @@ class ProjectMemberManagementServiceTest {
 
         assertThrows(ProjectMembershipException.class, () -> service.remove(7L, 12L, 1L));
         verify(repository, never()).delete(target);
+    }
+
+    @Test
+    void shouldClearAssignmentsWhenMemberBecomesViewer() {
+        prepare(ProjectMemberRole.OWNER, ProjectMemberRole.MEMBER);
+        when(repository.save(target)).thenReturn(target);
+        when(target.getId()).thenReturn(12L);
+        when(target.getJoinedAt()).thenReturn(null);
+        when(targetUser.getName()).thenReturn("Bianca");
+        when(targetUser.getEmail()).thenReturn("bianca@example.com");
+
+        service.changeRole(7L, 12L, 1L, new UpdateProjectMemberRoleRequest(ProjectMemberRole.VIEWER));
+
+        verify(taskRepository).clearAssigneeByProjectAndUser(7L, 2L);
+    }
+
+    @Test
+    void shouldClearAssignmentsWhenMemberIsRemoved() {
+        prepare(ProjectMemberRole.OWNER, ProjectMemberRole.MEMBER);
+
+        service.remove(7L, 12L, 1L);
+
+        verify(taskRepository).clearAssigneeByProjectAndUser(7L, 2L);
+        verify(repository).delete(target);
     }
 
     private void prepare(ProjectMemberRole actorRole, ProjectMemberRole targetRole) {

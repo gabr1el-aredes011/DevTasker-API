@@ -311,4 +311,23 @@ public class GlobalExceptionHandler {
                 .badRequest()
                 .body(error);
     }
+
+    @ExceptionHandler(InvalidTaskAssigneeException.class)
+    public ResponseEntity<ApiError> handleInvalidTaskAssignee(
+            InvalidTaskAssigneeException exception,
+            HttpServletRequest request
+    ) {
+        ApiError error = new ApiError(
+                HttpStatus.BAD_REQUEST.value(),
+                "INVALID_TASK_ASSIGNEE",
+                exception.getMessage(),
+                request.getRequestURI(),
+                OffsetDateTime.now(ZoneOffset.UTC),
+                Map.of()
+        );
+
+        return ResponseEntity
+                .badRequest()
+                .body(error);
+    }
 }

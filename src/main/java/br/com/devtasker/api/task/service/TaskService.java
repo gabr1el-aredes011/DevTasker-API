@@ -11,8 +11,12 @@ import br.com.devtasker.api.board.repository.BoardColumnRepository;
 import br.com.devtasker.api.board.repository.BoardRepository;
 import br.com.devtasker.api.exception.BoardColumnNotFoundException;
 import br.com.devtasker.api.exception.BoardNotFoundException;
+import br.com.devtasker.api.exception.InvalidTaskAssigneeException;
 import br.com.devtasker.api.exception.InvalidTaskMoveException;
 import br.com.devtasker.api.exception.TaskNotFoundException;
+import br.com.devtasker.api.project.domain.ProjectMember;
+import br.com.devtasker.api.project.domain.ProjectMemberRole;
+import br.com.devtasker.api.project.repository.ProjectMemberRepository;
 import br.com.devtasker.api.project.service.ProjectAccessService;
 import br.com.devtasker.api.task.domain.Task;
 import br.com.devtasker.api.task.dto.CreateTaskRequest;
@@ -32,19 +36,22 @@ public class TaskService {
     private final UserAccountRepository userAccountRepository;
     private final ProjectAccessService projectAccessService;
     private final BoardRepository boardRepository;
+    private final ProjectMemberRepository projectMemberRepository;
 
     public TaskService(
             TaskRepository taskRepository,
             BoardColumnRepository boardColumnRepository,
             BoardRepository boardRepository,
             UserAccountRepository userAccountRepository,
-            ProjectAccessService projectAccessService
+            ProjectAccessService projectAccessService,
+            ProjectMemberRepository projectMemberRepository
     ) {
         this.taskRepository = taskRepository;
         this.boardColumnRepository = boardColumnRepository;
         this.boardRepository = boardRepository;
         this.userAccountRepository = userAccountRepository;
         this.projectAccessService = projectAccessService;
+        this.projectMemberRepository = projectMemberRepository;
     }
 
     @Transactional
@@ -83,6 +90,8 @@ public class TaskService {
                 request.dueDate(),
                 maximumPosition + 1
         );
+
+        task.assignTo(resolveAssignee(projectId, request.assigneeId()));
 
         return toResponse(taskRepository.save(task));
     }
@@ -214,6 +223,8 @@ public class TaskService {
                 request.dueDate()
         );
 
+        task.assignTo(resolveAssignee(projectId, request.assigneeId()));
+
         Task updatedTask =
                 taskRepository.saveAndFlush(task);
 
@@ -270,6 +281,28 @@ public class TaskService {
                 .findActiveById(taskId)
                 .orElseThrow(TaskNotFoundException::new);
     }
+
+    private UserAccount resolveAssignee(
+            Long projectId,
+            Long assigneeId
+    ) {
+        if (assigneeId == null) {
+            return null;
+        }
+
+        ProjectMember membership = projectMemberRepository
+                .findActiveMembership(projectId, assigneeId)
+                .orElseThrow(
+                        InvalidTaskAssigneeException::new
+                );
+
+        if (membership.getRole() == ProjectMemberRole.VIEWER) {
+            throw new InvalidTaskAssigneeException();
+        }
+
+        return membership.getUser();
+    }
+
     @Transactional
     public TaskResponse move(
             Long taskId,

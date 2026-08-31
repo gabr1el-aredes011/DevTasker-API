@@ -138,6 +138,10 @@ public class Task {
         this.dueDate = dueDate;
     }
 
+    public void assignTo(UserAccount assignee) {
+        this.assignee = assignee;
+    }
+
     public void archive() {
         if (this.archivedAt == null) {
             this.archivedAt =
