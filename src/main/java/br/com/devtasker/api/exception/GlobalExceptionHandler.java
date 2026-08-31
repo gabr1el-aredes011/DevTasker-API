@@ -102,7 +102,7 @@ public class GlobalExceptionHandler {
         ApiError error = new ApiError(
                 HttpStatus.SERVICE_UNAVAILABLE.value(),
                 "EMAIL_DELIVERY_FAILED",
-                "Não foi possível enviar o e-mail de verificação. Tente novamente.",
+                "Não foi possível enviar o e-mail. Tente novamente.",
                 request.getRequestURI(),
                 OffsetDateTime.now(ZoneOffset.UTC),
                 Map.of()
@@ -111,6 +111,23 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(error);
+    }
+
+    @ExceptionHandler(ProjectMembershipException.class)
+    public ResponseEntity<ApiError> handleProjectMembership(
+            ProjectMembershipException exception,
+            HttpServletRequest request
+    ) {
+        ApiError error = new ApiError(
+                exception.getStatus().value(),
+                exception.getErrorCode(),
+                exception.getMessage(),
+                request.getRequestURI(),
+                OffsetDateTime.now(ZoneOffset.UTC),
+                Map.of()
+        );
+
+        return ResponseEntity.status(exception.getStatus()).body(error);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

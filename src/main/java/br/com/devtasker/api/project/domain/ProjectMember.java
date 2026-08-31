@@ -66,6 +66,26 @@ public class ProjectMember {
         );
     }
 
+    public static ProjectMember create(
+            Project project,
+            UserAccount user,
+            ProjectMemberRole role
+    ) {
+        if (role == ProjectMemberRole.OWNER) {
+            throw new IllegalArgumentException("Novos membros não podem receber a função OWNER.");
+        }
+
+        return new ProjectMember(project, user, role);
+    }
+
+    public void changeRole(ProjectMemberRole role) {
+        if (this.role == ProjectMemberRole.OWNER || role == ProjectMemberRole.OWNER) {
+            throw new IllegalArgumentException("A propriedade do projeto não pode ser alterada.");
+        }
+
+        this.role = role;
+    }
+
     @PrePersist
     private void beforeInsert() {
         this.joinedAt =
