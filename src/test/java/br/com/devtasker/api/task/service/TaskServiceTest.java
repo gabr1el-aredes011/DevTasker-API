@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -101,12 +102,14 @@ class TaskServiceTest {
                         null,
                         TaskPriority.HIGH,
                         LocalDate.now().plusDays(2),
-                        ASSIGNEE_ID
+                        ASSIGNEE_ID,
+                        List.of("Backend", " urgente ", "backend")
                 )
         );
 
         assertEquals(ASSIGNEE_ID, response.assignee().id());
         assertEquals("Bianca", response.assignee().name());
+        assertEquals(List.of("Backend", "urgente"), response.labels());
         verify(projectAccessService).requireWriteAccess(PROJECT_ID, USER_ID);
     }
 
@@ -127,7 +130,8 @@ class TaskServiceTest {
                                 null,
                                 TaskPriority.MEDIUM,
                                 null,
-                                ASSIGNEE_ID
+                                ASSIGNEE_ID,
+                                List.of()
                         )
                 )
         );
@@ -151,7 +155,8 @@ class TaskServiceTest {
                                 null,
                                 TaskPriority.MEDIUM,
                                 null,
-                                ASSIGNEE_ID
+                                ASSIGNEE_ID,
+                                List.of()
                         )
                 )
         );
@@ -184,12 +189,14 @@ class TaskServiceTest {
                         null,
                         TaskPriority.MEDIUM,
                         null,
-                        null
+                        null,
+                        List.of("Frontend")
                 )
         );
 
         assertNull(response.assignee());
         assertNull(task.getAssignee());
+        assertEquals(List.of("Frontend"), response.labels());
         verify(projectAccessService).requireWriteAccess(PROJECT_ID, USER_ID);
     }
 

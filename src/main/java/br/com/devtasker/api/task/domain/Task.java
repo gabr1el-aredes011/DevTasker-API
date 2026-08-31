@@ -3,10 +3,17 @@ package br.com.devtasker.api.task.domain;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 import br.com.devtasker.api.board.domain.BoardColumn;
 import br.com.devtasker.api.user.domain.UserAccount;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -16,18 +23,23 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 
 @Entity
 @Table(name = "tasks")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Task {
+
+    private static final int MAXIMUM_LABELS = 5;
+    private static final int MAXIMUM_LABEL_LENGTH = 30;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -69,6 +81,17 @@ public class Task {
 
     @Column(name = "archived_at")
     private OffsetDateTime archivedAt;
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "task_labels",
+            joinColumns = @JoinColumn(name = "task_id")
+    )
+    @OrderColumn(name = "position")
+    @Column(name = "label", nullable = false, length = MAXIMUM_LABEL_LENGTH)
+    @BatchSize(size = 50)
+    @Getter(AccessLevel.NONE)
+    private List<String> labels = new ArrayList<>();
 
     private Task(
             BoardColumn column,
@@ -140,6 +163,46 @@ public class Task {
 
     public void assignTo(UserAccount assignee) {
         this.assignee = assignee;
+    }
+
+    public List<String> getLabels() {
+        return List.copyOf(labels);
+    }
+
+    public void replaceLabels(List<String> requestedLabels) {
+        Map<String, String> normalizedLabels = new LinkedHashMap<>();
+
+        if (requestedLabels != null) {
+            for (String requestedLabel : requestedLabels) {
+                if (requestedLabel == null || requestedLabel.isBlank()) {
+                    throw new IllegalArgumentException(
+                            "As labels da tarefa não podem estar vazias."
+                    );
+                }
+
+                String normalizedLabel = requestedLabel.trim();
+
+                if (normalizedLabel.length() > MAXIMUM_LABEL_LENGTH) {
+                    throw new IllegalArgumentException(
+                            "Cada label deve possuir no máximo 30 caracteres."
+                    );
+                }
+
+                normalizedLabels.putIfAbsent(
+                        normalizedLabel.toLowerCase(Locale.ROOT),
+                        normalizedLabel
+                );
+            }
+        }
+
+        if (normalizedLabels.size() > MAXIMUM_LABELS) {
+            throw new IllegalArgumentException(
+                    "Uma tarefa pode possuir no máximo 5 labels."
+            );
+        }
+
+        labels.clear();
+        labels.addAll(normalizedLabels.values());
     }
 
     public void archive() {
