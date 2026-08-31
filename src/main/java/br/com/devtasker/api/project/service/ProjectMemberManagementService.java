@@ -10,19 +10,23 @@ import br.com.devtasker.api.project.domain.ProjectMemberRole;
 import br.com.devtasker.api.project.dto.ProjectMemberSummaryResponse;
 import br.com.devtasker.api.project.dto.UpdateProjectMemberRoleRequest;
 import br.com.devtasker.api.project.repository.ProjectMemberRepository;
+import br.com.devtasker.api.task.repository.TaskRepository;
 
 @Service
 public class ProjectMemberManagementService {
 
     private final ProjectMemberRepository memberRepository;
     private final ProjectAccessService accessService;
+    private final TaskRepository taskRepository;
 
     public ProjectMemberManagementService(
             ProjectMemberRepository memberRepository,
-            ProjectAccessService accessService
+            ProjectAccessService accessService,
+            TaskRepository taskRepository
     ) {
         this.memberRepository = memberRepository;
         this.accessService = accessService;
+        this.taskRepository = taskRepository;
     }
 
     @Transactional
@@ -40,6 +44,14 @@ public class ProjectMemberManagementService {
         requireAssignableRole(actor, requestedRole);
 
         target.changeRole(requestedRole);
+
+        if (requestedRole == ProjectMemberRole.VIEWER) {
+            taskRepository.clearAssigneeByProjectAndUser(
+                    projectId,
+                    target.getUser().getId()
+            );
+        }
+
         return toSummary(memberRepository.save(target), actorUserId);
     }
 
@@ -49,6 +61,12 @@ public class ProjectMemberManagementService {
         ProjectMember target = requireMember(projectId, membershipId);
 
         requireManageableTarget(actor, target);
+
+        taskRepository.clearAssigneeByProjectAndUser(
+                projectId,
+                target.getUser().getId()
+        );
+
         memberRepository.delete(target);
     }
 

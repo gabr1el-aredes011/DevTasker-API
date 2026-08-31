@@ -25,7 +25,9 @@ public record CreateTaskRequest(
         @NotNull(message = "A prioridade é obrigatória.")
         TaskPriority priority,
 
-        LocalDate dueDate
+        LocalDate dueDate,
+
+        Long assigneeId
 
 ) {
 }
