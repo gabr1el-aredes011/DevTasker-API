@@ -1,6 +1,7 @@
 package br.com.devtasker.api.task.dto;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import br.com.devtasker.api.task.domain.TaskPriority;
 import jakarta.validation.constraints.NotBlank;
@@ -27,7 +28,20 @@ public record UpdateTaskRequest(
 
         LocalDate dueDate,
 
-        Long assigneeId
+        Long assigneeId,
+
+        @Size(
+                max = 5,
+                message = "Uma tarefa pode possuir no máximo 5 labels."
+        )
+        List<
+                @NotBlank(message = "As labels da tarefa não podem estar vazias.")
+                @Size(
+                        max = 30,
+                        message = "Cada label deve possuir no máximo 30 caracteres."
+                )
+                String
+        > labels
 
 ) {
 }

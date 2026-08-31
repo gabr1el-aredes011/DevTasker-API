@@ -92,6 +92,7 @@ public class TaskService {
         );
 
         task.assignTo(resolveAssignee(projectId, request.assigneeId()));
+        task.replaceLabels(request.labels());
 
         return toResponse(taskRepository.save(task));
     }
@@ -178,6 +179,7 @@ public class TaskService {
                 task.getPosition(),
                 toUserResponse(task.getCreator()),
                 toUserResponse(task.getAssignee()),
+                task.getLabels(),
                 task.getCreatedAt(),
                 task.getUpdatedAt()
         );
@@ -224,6 +226,7 @@ public class TaskService {
         );
 
         task.assignTo(resolveAssignee(projectId, request.assigneeId()));
+        task.replaceLabels(request.labels());
 
         Task updatedTask =
                 taskRepository.saveAndFlush(task);

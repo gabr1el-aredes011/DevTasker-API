@@ -1,6 +1,7 @@
 package br.com.devtasker.api.board.dto;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import br.com.devtasker.api.task.domain.TaskPriority;
 
@@ -11,6 +12,7 @@ public record KanbanTaskResponse(
         LocalDate dueDate,
         Integer position,
         Long assigneeId,
-        String assigneeName
+        String assigneeName,
+        List<String> labels
 ) {
 }

@@ -214,7 +214,8 @@ public class BoardQueryService {
                 task.getDueDate(),
                 task.getPosition(),
                 assignee == null ? null : assignee.getId(),
-                assignee == null ? null : assignee.getName()
+                assignee == null ? null : assignee.getName(),
+                task.getLabels()
         );
     }
 }
