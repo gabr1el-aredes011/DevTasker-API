@@ -215,7 +215,11 @@ public class BoardQueryService {
                 task.getPosition(),
                 assignee == null ? null : assignee.getId(),
                 assignee == null ? null : assignee.getName(),
-                task.getLabels()
+                task.getLabels(),
+                (int) task.getChecklistItems().stream()
+                        .filter(item -> item.isCompleted())
+                        .count(),
+                task.getChecklistItems().size()
         );
     }
 }

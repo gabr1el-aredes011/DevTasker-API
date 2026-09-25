@@ -8,10 +8,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Objects;
 
 import br.com.devtasker.api.board.domain.BoardColumn;
 import br.com.devtasker.api.user.domain.UserAccount;
 import jakarta.persistence.CollectionTable;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
@@ -24,6 +27,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderColumn;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -92,6 +97,16 @@ public class Task {
     @BatchSize(size = 50)
     @Getter(AccessLevel.NONE)
     private List<String> labels = new ArrayList<>();
+
+    @OneToMany(
+            mappedBy = "task",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @OrderBy("position ASC")
+    @BatchSize(size = 50)
+    @Getter(AccessLevel.NONE)
+    private List<TaskChecklistItem> checklistItems = new ArrayList<>();
 
     private Task(
             BoardColumn column,
@@ -203,6 +218,40 @@ public class Task {
 
         labels.clear();
         labels.addAll(normalizedLabels.values());
+    }
+
+    public List<TaskChecklistItem> getChecklistItems() {
+        return List.copyOf(checklistItems);
+    }
+
+    public TaskChecklistItem addChecklistItem(String title) {
+        int nextPosition = checklistItems.stream()
+                .mapToInt(TaskChecklistItem::getPosition)
+                .max()
+                .orElse(-1) + 1;
+
+        TaskChecklistItem item = TaskChecklistItem.create(
+                this,
+                title,
+                nextPosition
+        );
+
+        checklistItems.add(item);
+        return item;
+    }
+
+    public Optional<TaskChecklistItem> findChecklistItem(Long itemId) {
+        return checklistItems.stream()
+                .filter(item -> Objects.equals(item.getId(), itemId))
+                .findFirst();
+    }
+
+    public void removeChecklistItem(TaskChecklistItem item) {
+        checklistItems.remove(item);
+    }
+
+    public void recordActivity() {
+        this.updatedAt = OffsetDateTime.now(ZoneOffset.UTC);
     }
 
     public void archive() {

@@ -292,6 +292,40 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(error);
     }
+
+    @ExceptionHandler(TaskChecklistItemNotFoundException.class)
+    public ResponseEntity<ApiError> handleTaskChecklistItemNotFound(
+            TaskChecklistItemNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        ApiError error = new ApiError(
+                HttpStatus.NOT_FOUND.value(),
+                "TASK_CHECKLIST_ITEM_NOT_FOUND",
+                exception.getMessage(),
+                request.getRequestURI(),
+                OffsetDateTime.now(ZoneOffset.UTC),
+                Map.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(TaskChecklistLimitException.class)
+    public ResponseEntity<ApiError> handleTaskChecklistLimit(
+            TaskChecklistLimitException exception,
+            HttpServletRequest request
+    ) {
+        ApiError error = new ApiError(
+                HttpStatus.BAD_REQUEST.value(),
+                "TASK_CHECKLIST_LIMIT_EXCEEDED",
+                exception.getMessage(),
+                request.getRequestURI(),
+                OffsetDateTime.now(ZoneOffset.UTC),
+                Map.of()
+        );
+
+        return ResponseEntity.badRequest().body(error);
+    }
     
     @ExceptionHandler(InvalidTaskMoveException.class)
     public ResponseEntity<ApiError> handleInvalidTaskMove(

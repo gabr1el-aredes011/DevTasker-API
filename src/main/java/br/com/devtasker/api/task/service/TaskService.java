@@ -14,16 +14,22 @@ import br.com.devtasker.api.exception.BoardNotFoundException;
 import br.com.devtasker.api.exception.InvalidTaskAssigneeException;
 import br.com.devtasker.api.exception.InvalidTaskMoveException;
 import br.com.devtasker.api.exception.TaskNotFoundException;
+import br.com.devtasker.api.exception.TaskChecklistItemNotFoundException;
+import br.com.devtasker.api.exception.TaskChecklistLimitException;
 import br.com.devtasker.api.project.domain.ProjectMember;
 import br.com.devtasker.api.project.domain.ProjectMemberRole;
 import br.com.devtasker.api.project.repository.ProjectMemberRepository;
 import br.com.devtasker.api.project.service.ProjectAccessService;
 import br.com.devtasker.api.task.domain.Task;
+import br.com.devtasker.api.task.domain.TaskChecklistItem;
 import br.com.devtasker.api.task.dto.CreateTaskRequest;
+import br.com.devtasker.api.task.dto.CreateTaskChecklistItemRequest;
 import br.com.devtasker.api.task.dto.MoveTaskRequest;
 import br.com.devtasker.api.task.dto.TaskResponse;
+import br.com.devtasker.api.task.dto.TaskChecklistItemResponse;
 import br.com.devtasker.api.task.dto.TaskUserSummaryResponse;
 import br.com.devtasker.api.task.dto.UpdateTaskRequest;
+import br.com.devtasker.api.task.dto.UpdateTaskChecklistItemRequest;
 import br.com.devtasker.api.task.repository.TaskRepository;
 import br.com.devtasker.api.user.domain.UserAccount;
 import br.com.devtasker.api.user.repository.UserAccountRepository;
@@ -180,8 +186,24 @@ public class TaskService {
                 toUserResponse(task.getCreator()),
                 toUserResponse(task.getAssignee()),
                 task.getLabels(),
+                task.getChecklistItems().stream()
+                        .map(this::toChecklistItemResponse)
+                        .toList(),
                 task.getCreatedAt(),
                 task.getUpdatedAt()
+        );
+    }
+
+    private TaskChecklistItemResponse toChecklistItemResponse(
+            TaskChecklistItem item
+    ) {
+        return new TaskChecklistItemResponse(
+                item.getId(),
+                item.getTitle(),
+                item.isCompleted(),
+                item.getPosition(),
+                item.getCreatedAt(),
+                item.getUpdatedAt()
         );
     }
 
@@ -232,6 +254,72 @@ public class TaskService {
                 taskRepository.saveAndFlush(task);
 
         return toResponse(updatedTask);
+    }
+
+    @Transactional
+    public TaskResponse addChecklistItem(
+            Long taskId,
+            Long userId,
+            CreateTaskChecklistItemRequest request
+    ) {
+        Task task = findActiveTask(taskId);
+        requireTaskWriteAccess(task, userId);
+
+        if (task.getChecklistItems().size() >= 50) {
+            throw new TaskChecklistLimitException();
+        }
+
+        task.addChecklistItem(request.title());
+        task.recordActivity();
+
+        return toResponse(taskRepository.saveAndFlush(task));
+    }
+
+    @Transactional
+    public TaskResponse updateChecklistItem(
+            Long taskId,
+            Long itemId,
+            Long userId,
+            UpdateTaskChecklistItemRequest request
+    ) {
+        Task task = findActiveTask(taskId);
+        requireTaskWriteAccess(task, userId);
+
+        TaskChecklistItem item = task.findChecklistItem(itemId)
+                .orElseThrow(TaskChecklistItemNotFoundException::new);
+
+        item.update(request.title(), request.completed());
+        task.recordActivity();
+
+        return toResponse(taskRepository.saveAndFlush(task));
+    }
+
+    @Transactional
+    public TaskResponse removeChecklistItem(
+            Long taskId,
+            Long itemId,
+            Long userId
+    ) {
+        Task task = findActiveTask(taskId);
+        requireTaskWriteAccess(task, userId);
+
+        TaskChecklistItem item = task.findChecklistItem(itemId)
+                .orElseThrow(TaskChecklistItemNotFoundException::new);
+
+        task.removeChecklistItem(item);
+        task.recordActivity();
+
+        return toResponse(taskRepository.saveAndFlush(task));
+    }
+
+    private void requireTaskWriteAccess(Task task, Long userId) {
+        Long projectId = task
+                .getColumn()
+                .getBoard()
+                .getProject()
+                .getId();
+
+        projectAccessService.requireWriteAccess(projectId, userId);
     }
 
     @Transactional

@@ -13,6 +13,8 @@ public record KanbanTaskResponse(
         Integer position,
         Long assigneeId,
         String assigneeName,
-        List<String> labels
+        List<String> labels,
+        int completedChecklistItems,
+        int totalChecklistItems
 ) {
 }
