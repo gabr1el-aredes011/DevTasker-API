@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.security.authentication.BadCredentialsException;
 
 import br.com.devtasker.api.email.exception.EmailDeliveryException;
@@ -342,6 +343,57 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(TaskAttachmentNotFoundException.class)
+    public ResponseEntity<ApiError> handleTaskAttachmentNotFound(
+            TaskAttachmentNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        ApiError error = new ApiError(
+                HttpStatus.NOT_FOUND.value(),
+                "TASK_ATTACHMENT_NOT_FOUND",
+                exception.getMessage(),
+                request.getRequestURI(),
+                OffsetDateTime.now(ZoneOffset.UTC),
+                Map.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(TaskAttachmentException.class)
+    public ResponseEntity<ApiError> handleTaskAttachment(
+            TaskAttachmentException exception,
+            HttpServletRequest request
+    ) {
+        ApiError error = new ApiError(
+                exception.getStatus().value(),
+                exception.getErrorCode(),
+                exception.getMessage(),
+                request.getRequestURI(),
+                OffsetDateTime.now(ZoneOffset.UTC),
+                Map.of()
+        );
+
+        return ResponseEntity.status(exception.getStatus()).body(error);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleMaxUploadSize(
+            MaxUploadSizeExceededException exception,
+            HttpServletRequest request
+    ) {
+        ApiError error = new ApiError(
+                HttpStatus.CONTENT_TOO_LARGE.value(),
+                "TASK_ATTACHMENT_TOO_LARGE",
+                "O arquivo deve possuir no máximo 10 MB.",
+                request.getRequestURI(),
+                OffsetDateTime.now(ZoneOffset.UTC),
+                Map.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE).body(error);
     }
     
     @ExceptionHandler(InvalidTaskMoveException.class)
