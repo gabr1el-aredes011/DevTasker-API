@@ -1,6 +1,7 @@
 package br.com.devtasker.api.board.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import br.com.devtasker.api.board.dto.BoardDetailsResponse;
 import br.com.devtasker.api.board.dto.BoardSummaryResponse;
@@ -17,6 +19,7 @@ import br.com.devtasker.api.board.dto.KanbanBoardResponse;
 import br.com.devtasker.api.board.dto.UpdateBoardRequest;
 import br.com.devtasker.api.board.service.BoardCommandService;
 import br.com.devtasker.api.board.service.BoardQueryService;
+import br.com.devtasker.api.board.realtime.BoardRealtimeBroker;
 import jakarta.validation.Valid;
 
 @RestController
@@ -25,13 +28,16 @@ public class BoardController {
 
     private final BoardQueryService boardQueryService;
     private final BoardCommandService boardCommandService;
+    private final BoardRealtimeBroker boardRealtimeBroker;
 
     public BoardController(
             BoardQueryService boardQueryService,
-            BoardCommandService boardCommandService
+            BoardCommandService boardCommandService,
+            BoardRealtimeBroker boardRealtimeBroker
     ) {
         this.boardQueryService = boardQueryService;
         this.boardCommandService = boardCommandService;
+        this.boardRealtimeBroker = boardRealtimeBroker;
     }
 
     @GetMapping("/{boardId}")
@@ -57,6 +63,14 @@ public class BoardController {
                 boardId,
                 userId.longValue()
         );
+    }
+
+    @GetMapping(value = "/{boardId}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamEvents(
+            @PathVariable Long boardId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return boardRealtimeBroker.subscribe(boardId, extractUserId(jwt));
     }
 
     @PutMapping("/{boardId}")

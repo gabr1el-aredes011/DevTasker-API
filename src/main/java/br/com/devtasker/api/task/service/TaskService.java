@@ -8,12 +8,15 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.devtasker.api.board.domain.BoardColumn;
 import br.com.devtasker.api.board.repository.BoardColumnRepository;
 import br.com.devtasker.api.board.repository.BoardRepository;
+import br.com.devtasker.api.board.realtime.BoardRealtimeEvent;
+import br.com.devtasker.api.board.realtime.BoardRealtimeEventType;
 import br.com.devtasker.api.exception.BoardColumnNotFoundException;
 import br.com.devtasker.api.exception.BoardNotFoundException;
 import br.com.devtasker.api.exception.InvalidTaskAssigneeException;
@@ -55,6 +58,7 @@ public class TaskService {
     private final ProjectMemberRepository projectMemberRepository;
     private final TaskActivityRecorder activityRecorder;
     private final ProjectLabelRepository projectLabelRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public TaskService(
             TaskRepository taskRepository,
@@ -64,7 +68,8 @@ public class TaskService {
             ProjectAccessService projectAccessService,
             ProjectMemberRepository projectMemberRepository,
             TaskActivityRecorder activityRecorder,
-            ProjectLabelRepository projectLabelRepository
+            ProjectLabelRepository projectLabelRepository,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.taskRepository = taskRepository;
         this.boardColumnRepository = boardColumnRepository;
@@ -74,6 +79,7 @@ public class TaskService {
         this.projectMemberRepository = projectMemberRepository;
         this.activityRecorder = activityRecorder;
         this.projectLabelRepository = projectLabelRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -123,6 +129,7 @@ public class TaskService {
                 TaskActivityType.TASK_CREATED,
                 "criou a tarefa."
         );
+        publishRealtimeEvent(createdTask, userId, BoardRealtimeEventType.TASK_CREATED);
 
         return toResponse(createdTask);
     }
@@ -308,6 +315,7 @@ public class TaskService {
                 TaskActivityType.TASK_UPDATED,
                 "atualizou os detalhes da tarefa."
         );
+        publishRealtimeEvent(updatedTask, userId, BoardRealtimeEventType.TASK_UPDATED);
 
         return toResponse(updatedTask);
     }
@@ -438,6 +446,7 @@ public class TaskService {
                 TaskActivityType.TASK_ARCHIVED,
                 "arquivou a tarefa."
         );
+        publishRealtimeEvent(task, userId, BoardRealtimeEventType.TASK_ARCHIVED);
 
         List<Task> remainingTasks =
             taskRepository
@@ -596,8 +605,24 @@ public class TaskService {
                 TaskActivityType.TASK_MOVED,
                 "moveu a tarefa para \"" + targetColumn.getName() + "\"."
         );
+        publishRealtimeEvent(task, userId, BoardRealtimeEventType.TASK_MOVED);
 
         return toResponse(task);
+    }
+
+    private void publishRealtimeEvent(
+            Task task,
+            Long actorUserId,
+            BoardRealtimeEventType type
+    ) {
+        eventPublisher.publishEvent(
+                BoardRealtimeEvent.taskChanged(
+                        task.getColumn().getBoard().getId(),
+                        task.getId(),
+                        actorUserId,
+                        type
+                )
+        );
     }
     private void moveInsideSameColumn(
             Task task,

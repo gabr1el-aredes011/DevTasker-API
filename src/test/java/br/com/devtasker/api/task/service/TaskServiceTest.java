@@ -19,11 +19,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import br.com.devtasker.api.board.domain.Board;
 import br.com.devtasker.api.board.domain.BoardColumn;
 import br.com.devtasker.api.board.repository.BoardColumnRepository;
 import br.com.devtasker.api.board.repository.BoardRepository;
+import br.com.devtasker.api.board.realtime.BoardRealtimeEvent;
 import br.com.devtasker.api.exception.InvalidTaskAssigneeException;
 import br.com.devtasker.api.project.domain.Project;
 import br.com.devtasker.api.project.domain.ProjectMember;
@@ -59,6 +61,7 @@ class TaskServiceTest {
     @Mock private ProjectMemberRepository projectMemberRepository;
     @Mock private TaskActivityRecorder activityRecorder;
     @Mock private ProjectLabelRepository projectLabelRepository;
+    @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private BoardColumn column;
     @Mock private Board board;
     @Mock private Project project;
@@ -81,7 +84,8 @@ class TaskServiceTest {
                 projectAccessService,
                 projectMemberRepository,
                 activityRecorder,
-                projectLabelRepository
+                projectLabelRepository,
+                eventPublisher
         );
 
         when(column.getBoard()).thenReturn(board);
@@ -138,6 +142,7 @@ class TaskServiceTest {
                 response.labels().stream().map(label -> label.name()).toList()
         );
         verify(projectAccessService).requireWriteAccess(PROJECT_ID, USER_ID);
+        verify(eventPublisher).publishEvent(any(BoardRealtimeEvent.class));
     }
 
     @Test
