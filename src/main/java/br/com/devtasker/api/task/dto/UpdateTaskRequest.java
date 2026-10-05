@@ -3,6 +3,7 @@ package br.com.devtasker.api.task.dto;
 import java.time.LocalDate;
 import java.util.List;
 
+import br.com.devtasker.api.task.domain.Task;
 import br.com.devtasker.api.task.domain.TaskPriority;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,7 +19,7 @@ public record UpdateTaskRequest(
         String title,
 
         @Size(
-                max = 4000,
+                max = Task.MAXIMUM_DESCRIPTION_LENGTH,
                 message = "A descrição deve possuir no máximo 4000 caracteres."
         )
         String description,

@@ -75,6 +75,31 @@ class TaskTest {
         );
     }
 
+    @Test
+    void shouldPreserveMarkdownAndRejectOversizedDescription() {
+        String markdown = "# Objetivo\n\n- [ ] Validar entrega\n- **Documentar** decisão";
+        Task task = Task.create(
+                Mockito.mock(BoardColumn.class),
+                Mockito.mock(UserAccount.class),
+                "Tarefa com contexto",
+                markdown,
+                TaskPriority.MEDIUM,
+                null,
+                0
+        );
+
+        assertEquals(markdown, task.getDescription());
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> task.updateDetails(
+                        "Tarefa com contexto",
+                        "a".repeat(Task.MAXIMUM_DESCRIPTION_LENGTH + 1),
+                        TaskPriority.MEDIUM,
+                        null
+                )
+        );
+    }
+
     private Task newTask() {
         return Task.create(
                 Mockito.mock(BoardColumn.class),

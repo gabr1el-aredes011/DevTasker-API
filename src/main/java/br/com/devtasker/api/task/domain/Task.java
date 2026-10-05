@@ -43,6 +43,7 @@ import org.hibernate.annotations.BatchSize;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Task {
 
+    public static final int MAXIMUM_DESCRIPTION_LENGTH = 4000;
     private static final int MAXIMUM_LABELS = 5;
     private static final int MAXIMUM_LABEL_LENGTH = 30;
 
@@ -65,7 +66,7 @@ public class Task {
     @Column(nullable = false, length = 180)
     private String title;
 
-    @Column(length = 4000)
+    @Column(length = MAXIMUM_DESCRIPTION_LENGTH)
     private String description;
 
     @Enumerated(EnumType.STRING)
@@ -123,6 +124,8 @@ public class Task {
             );
         }
 
+        validateDescription(description);
+
         this.column = column;
         this.creator = creator;
         this.title = title;
@@ -170,10 +173,20 @@ public class Task {
             );
         }
 
+        validateDescription(description);
+
         this.title = title.trim();
         this.description = description;
         this.priority = priority;
         this.dueDate = dueDate;
+    }
+
+    private static void validateDescription(String description) {
+        if (description != null && description.length() > MAXIMUM_DESCRIPTION_LENGTH) {
+            throw new IllegalArgumentException(
+                    "A descrição deve possuir no máximo 4000 caracteres."
+            );
+        }
     }
 
     public void assignTo(UserAccount assignee) {
