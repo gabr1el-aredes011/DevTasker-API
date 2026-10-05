@@ -14,16 +14,23 @@ import br.com.devtasker.api.exception.BoardNotFoundException;
 import br.com.devtasker.api.exception.InvalidTaskAssigneeException;
 import br.com.devtasker.api.exception.InvalidTaskMoveException;
 import br.com.devtasker.api.exception.TaskNotFoundException;
+import br.com.devtasker.api.exception.TaskChecklistItemNotFoundException;
+import br.com.devtasker.api.exception.TaskChecklistLimitException;
 import br.com.devtasker.api.project.domain.ProjectMember;
 import br.com.devtasker.api.project.domain.ProjectMemberRole;
 import br.com.devtasker.api.project.repository.ProjectMemberRepository;
 import br.com.devtasker.api.project.service.ProjectAccessService;
 import br.com.devtasker.api.task.domain.Task;
+import br.com.devtasker.api.task.domain.TaskActivityType;
+import br.com.devtasker.api.task.domain.TaskChecklistItem;
 import br.com.devtasker.api.task.dto.CreateTaskRequest;
+import br.com.devtasker.api.task.dto.CreateTaskChecklistItemRequest;
 import br.com.devtasker.api.task.dto.MoveTaskRequest;
 import br.com.devtasker.api.task.dto.TaskResponse;
+import br.com.devtasker.api.task.dto.TaskChecklistItemResponse;
 import br.com.devtasker.api.task.dto.TaskUserSummaryResponse;
 import br.com.devtasker.api.task.dto.UpdateTaskRequest;
+import br.com.devtasker.api.task.dto.UpdateTaskChecklistItemRequest;
 import br.com.devtasker.api.task.repository.TaskRepository;
 import br.com.devtasker.api.user.domain.UserAccount;
 import br.com.devtasker.api.user.repository.UserAccountRepository;
@@ -37,6 +44,7 @@ public class TaskService {
     private final ProjectAccessService projectAccessService;
     private final BoardRepository boardRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final TaskActivityRecorder activityRecorder;
 
     public TaskService(
             TaskRepository taskRepository,
@@ -44,7 +52,8 @@ public class TaskService {
             BoardRepository boardRepository,
             UserAccountRepository userAccountRepository,
             ProjectAccessService projectAccessService,
-            ProjectMemberRepository projectMemberRepository
+            ProjectMemberRepository projectMemberRepository,
+            TaskActivityRecorder activityRecorder
     ) {
         this.taskRepository = taskRepository;
         this.boardColumnRepository = boardColumnRepository;
@@ -52,6 +61,7 @@ public class TaskService {
         this.userAccountRepository = userAccountRepository;
         this.projectAccessService = projectAccessService;
         this.projectMemberRepository = projectMemberRepository;
+        this.activityRecorder = activityRecorder;
     }
 
     @Transactional
@@ -94,7 +104,15 @@ public class TaskService {
         task.assignTo(resolveAssignee(projectId, request.assigneeId()));
         task.replaceLabels(request.labels());
 
-        return toResponse(taskRepository.save(task));
+        Task createdTask = taskRepository.save(task);
+        activityRecorder.record(
+                createdTask,
+                creator,
+                TaskActivityType.TASK_CREATED,
+                "criou a tarefa."
+        );
+
+        return toResponse(createdTask);
     }
 
     @Transactional(readOnly = true)
@@ -180,8 +198,24 @@ public class TaskService {
                 toUserResponse(task.getCreator()),
                 toUserResponse(task.getAssignee()),
                 task.getLabels(),
+                task.getChecklistItems().stream()
+                        .map(this::toChecklistItemResponse)
+                        .toList(),
                 task.getCreatedAt(),
                 task.getUpdatedAt()
+        );
+    }
+
+    private TaskChecklistItemResponse toChecklistItemResponse(
+            TaskChecklistItem item
+    ) {
+        return new TaskChecklistItemResponse(
+                item.getId(),
+                item.getTitle(),
+                item.isCompleted(),
+                item.getPosition(),
+                item.getCreatedAt(),
+                item.getUpdatedAt()
         );
     }
 
@@ -231,7 +265,112 @@ public class TaskService {
         Task updatedTask =
                 taskRepository.saveAndFlush(task);
 
+        activityRecorder.record(
+                updatedTask,
+                userId,
+                TaskActivityType.TASK_UPDATED,
+                "atualizou os detalhes da tarefa."
+        );
+
         return toResponse(updatedTask);
+    }
+
+    @Transactional
+    public TaskResponse addChecklistItem(
+            Long taskId,
+            Long userId,
+            CreateTaskChecklistItemRequest request
+    ) {
+        Task task = findActiveTask(taskId);
+        requireTaskWriteAccess(task, userId);
+
+        if (task.getChecklistItems().size() >= 50) {
+            throw new TaskChecklistLimitException();
+        }
+
+        TaskChecklistItem item = task.addChecklistItem(request.title());
+        task.recordActivity();
+
+        Task updatedTask = taskRepository.saveAndFlush(task);
+        activityRecorder.record(
+                updatedTask,
+                userId,
+                TaskActivityType.CHECKLIST_ITEM_ADDED,
+                "adicionou o item \"" + item.getTitle() + "\" à checklist."
+        );
+
+        return toResponse(updatedTask);
+    }
+
+    @Transactional
+    public TaskResponse updateChecklistItem(
+            Long taskId,
+            Long itemId,
+            Long userId,
+            UpdateTaskChecklistItemRequest request
+    ) {
+        Task task = findActiveTask(taskId);
+        requireTaskWriteAccess(task, userId);
+
+        TaskChecklistItem item = task.findChecklistItem(itemId)
+                .orElseThrow(TaskChecklistItemNotFoundException::new);
+
+        boolean wasCompleted = item.isCompleted();
+        item.update(request.title(), request.completed());
+        task.recordActivity();
+
+        Task updatedTask = taskRepository.saveAndFlush(task);
+        String activityDescription = wasCompleted == item.isCompleted()
+                ? "atualizou o item \"" + item.getTitle() + "\" da checklist."
+                : item.isCompleted()
+                        ? "concluiu o item \"" + item.getTitle() + "\" da checklist."
+                        : "reabriu o item \"" + item.getTitle() + "\" da checklist.";
+
+        activityRecorder.record(
+                updatedTask,
+                userId,
+                TaskActivityType.CHECKLIST_ITEM_UPDATED,
+                activityDescription
+        );
+
+        return toResponse(updatedTask);
+    }
+
+    @Transactional
+    public TaskResponse removeChecklistItem(
+            Long taskId,
+            Long itemId,
+            Long userId
+    ) {
+        Task task = findActiveTask(taskId);
+        requireTaskWriteAccess(task, userId);
+
+        TaskChecklistItem item = task.findChecklistItem(itemId)
+                .orElseThrow(TaskChecklistItemNotFoundException::new);
+
+        String itemTitle = item.getTitle();
+        task.removeChecklistItem(item);
+        task.recordActivity();
+
+        Task updatedTask = taskRepository.saveAndFlush(task);
+        activityRecorder.record(
+                updatedTask,
+                userId,
+                TaskActivityType.CHECKLIST_ITEM_REMOVED,
+                "removeu o item \"" + itemTitle + "\" da checklist."
+        );
+
+        return toResponse(updatedTask);
+    }
+
+    private void requireTaskWriteAccess(Task task, Long userId) {
+        Long projectId = task
+                .getColumn()
+                .getBoard()
+                .getProject()
+                .getId();
+
+        projectAccessService.requireWriteAccess(projectId, userId);
     }
 
     @Transactional
@@ -256,6 +395,12 @@ public class TaskService {
         task.archive();
 
         taskRepository.saveAndFlush(task);
+        activityRecorder.record(
+                task,
+                userId,
+                TaskActivityType.TASK_ARCHIVED,
+                "arquivou a tarefa."
+        );
 
         List<Task> remainingTasks =
             taskRepository
@@ -363,6 +508,14 @@ public class TaskService {
                     request.targetPosition()
             );
         }
+
+        task.recordActivity();
+        activityRecorder.record(
+                task,
+                userId,
+                TaskActivityType.TASK_MOVED,
+                "moveu a tarefa para \"" + targetColumn.getName() + "\"."
+        );
 
         return toResponse(task);
     }

@@ -70,12 +70,17 @@ class TaskRepositoryIntegrationTest {
                 0
         );
         task.replaceLabels(List.of("Backend", "Urgente"));
+        task.addChecklistItem("Preparar ambiente");
+        task.addChecklistItem("Executar validação");
         task = taskRepository.saveAndFlush(task);
 
         entityManager.clear();
 
         Task persistedTask = taskRepository.findActiveById(task.getId()).orElseThrow();
         assertEquals(List.of("Backend", "Urgente"), persistedTask.getLabels());
+        assertEquals(2, persistedTask.getChecklistItems().size());
+        assertEquals("Preparar ambiente", persistedTask.getChecklistItems().getFirst().getTitle());
+        assertEquals(0, persistedTask.getChecklistItems().getFirst().getPosition());
 
         persistedTask.replaceLabels(List.of("Frontend", "Melhoria"));
         taskRepository.saveAndFlush(persistedTask);

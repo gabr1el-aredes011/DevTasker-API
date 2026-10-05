@@ -2,6 +2,8 @@ package br.com.devtasker.api.task.domain;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
@@ -41,6 +43,35 @@ class TaskTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> task.replaceLabels(List.of("Backend", " "))
+        );
+    }
+
+    @Test
+    void shouldManageChecklistItemsInsideTaskAggregate() {
+        Task task = newTask();
+
+        TaskChecklistItem first = task.addChecklistItem("  Preparar cenário  ");
+        TaskChecklistItem second = task.addChecklistItem("Executar teste");
+
+        assertEquals("Preparar cenário", first.getTitle());
+        assertFalse(first.isCompleted());
+        assertEquals(0, first.getPosition());
+        assertEquals(1, second.getPosition());
+
+        first.update(first.getTitle(), true);
+        assertTrue(first.isCompleted());
+
+        task.removeChecklistItem(second);
+        assertEquals(List.of(first), task.getChecklistItems());
+    }
+
+    @Test
+    void shouldRejectBlankChecklistItemTitle() {
+        Task task = newTask();
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> task.addChecklistItem(" ")
         );
     }
 

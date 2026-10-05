@@ -15,7 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import br.com.devtasker.api.task.dto.CreateTaskRequest;
+import br.com.devtasker.api.task.dto.CreateTaskChecklistItemRequest;
 import br.com.devtasker.api.task.dto.TaskResponse;
+import br.com.devtasker.api.task.dto.UpdateTaskChecklistItemRequest;
 import br.com.devtasker.api.task.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -122,6 +124,47 @@ public class TaskController {
                 taskId,
                 extractUserId(jwt),
                 request
+        );
+    }
+
+    @PostMapping("/api/tasks/{taskId}/checklist-items")
+    public TaskResponse addChecklistItem(
+            @PathVariable Long taskId,
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody CreateTaskChecklistItemRequest request
+    ) {
+        return taskService.addChecklistItem(
+                taskId,
+                extractUserId(jwt),
+                request
+        );
+    }
+
+    @PatchMapping("/api/tasks/{taskId}/checklist-items/{itemId}")
+    public TaskResponse updateChecklistItem(
+            @PathVariable Long taskId,
+            @PathVariable Long itemId,
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody UpdateTaskChecklistItemRequest request
+    ) {
+        return taskService.updateChecklistItem(
+                taskId,
+                itemId,
+                extractUserId(jwt),
+                request
+        );
+    }
+
+    @DeleteMapping("/api/tasks/{taskId}/checklist-items/{itemId}")
+    public TaskResponse removeChecklistItem(
+            @PathVariable Long taskId,
+            @PathVariable Long itemId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return taskService.removeChecklistItem(
+                taskId,
+                itemId,
+                extractUserId(jwt)
         );
     }
 }

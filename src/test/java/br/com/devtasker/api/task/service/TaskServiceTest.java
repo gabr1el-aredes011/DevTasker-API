@@ -32,6 +32,7 @@ import br.com.devtasker.api.project.service.ProjectAccessService;
 import br.com.devtasker.api.task.domain.Task;
 import br.com.devtasker.api.task.domain.TaskPriority;
 import br.com.devtasker.api.task.dto.CreateTaskRequest;
+import br.com.devtasker.api.task.dto.CreateTaskChecklistItemRequest;
 import br.com.devtasker.api.task.dto.UpdateTaskRequest;
 import br.com.devtasker.api.task.repository.TaskRepository;
 import br.com.devtasker.api.user.domain.UserAccount;
@@ -52,6 +53,7 @@ class TaskServiceTest {
     @Mock private UserAccountRepository userAccountRepository;
     @Mock private ProjectAccessService projectAccessService;
     @Mock private ProjectMemberRepository projectMemberRepository;
+    @Mock private TaskActivityRecorder activityRecorder;
     @Mock private BoardColumn column;
     @Mock private Board board;
     @Mock private Project project;
@@ -69,7 +71,8 @@ class TaskServiceTest {
                 boardRepository,
                 userAccountRepository,
                 projectAccessService,
-                projectMemberRepository
+                projectMemberRepository,
+                activityRecorder
         );
 
         when(column.getBoard()).thenReturn(board);
@@ -197,6 +200,34 @@ class TaskServiceTest {
         assertNull(response.assignee());
         assertNull(task.getAssignee());
         assertEquals(List.of("Frontend"), response.labels());
+        verify(projectAccessService).requireWriteAccess(PROJECT_ID, USER_ID);
+    }
+
+    @Test
+    void shouldAddChecklistItemWithProjectWriteAccess() {
+        when(column.getId()).thenReturn(COLUMN_ID);
+        Task task = Task.create(
+                column,
+                creator,
+                "Tarefa existente",
+                null,
+                TaskPriority.LOW,
+                null,
+                0
+        );
+
+        when(taskRepository.findActiveById(TASK_ID)).thenReturn(Optional.of(task));
+        when(taskRepository.saveAndFlush(task)).thenReturn(task);
+
+        var response = service.addChecklistItem(
+                TASK_ID,
+                USER_ID,
+                new CreateTaskChecklistItemRequest("  Validar publicação  ")
+        );
+
+        assertEquals(1, response.checklistItems().size());
+        assertEquals("Validar publicação", response.checklistItems().getFirst().title());
+        assertEquals(false, response.checklistItems().getFirst().completed());
         verify(projectAccessService).requireWriteAccess(PROJECT_ID, USER_ID);
     }
 
