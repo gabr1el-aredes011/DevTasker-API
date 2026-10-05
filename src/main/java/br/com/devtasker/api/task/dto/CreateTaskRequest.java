@@ -35,14 +35,7 @@ public record CreateTaskRequest(
                 max = 5,
                 message = "Uma tarefa pode possuir no máximo 5 labels."
         )
-        List<
-                @NotBlank(message = "As labels da tarefa não podem estar vazias.")
-                @Size(
-                        max = 30,
-                        message = "Cada label deve possuir no máximo 30 caracteres."
-                )
-                String
-        > labels
+        List<@NotNull(message = "Os identificadores das labels são obrigatórios.") Long> labelIds
 
 ) {
 }

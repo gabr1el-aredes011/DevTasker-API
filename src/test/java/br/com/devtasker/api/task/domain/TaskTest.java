@@ -11,17 +11,20 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import br.com.devtasker.api.board.domain.BoardColumn;
+import br.com.devtasker.api.project.domain.ProjectLabel;
 import br.com.devtasker.api.user.domain.UserAccount;
 
 class TaskTest {
 
     @Test
-    void shouldNormalizeAndDeduplicateLabelsWithoutChangingTheirOrder() {
+    void shouldDeduplicateCatalogLabelsWithoutChangingTheirOrder() {
         Task task = newTask();
+        ProjectLabel backend = Mockito.mock(ProjectLabel.class);
+        ProjectLabel urgent = Mockito.mock(ProjectLabel.class);
 
-        task.replaceLabels(List.of(" Backend ", "URGENTE", "backend"));
+        task.replaceLabels(List.of(backend, urgent, backend));
 
-        assertEquals(List.of("Backend", "URGENTE"), task.getLabels());
+        assertEquals(List.of(backend, urgent), task.getLabels());
     }
 
     @Test
@@ -31,18 +34,25 @@ class TaskTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> task.replaceLabels(
-                        List.of("A", "B", "C", "D", "E", "F")
+                        List.of(
+                                Mockito.mock(ProjectLabel.class),
+                                Mockito.mock(ProjectLabel.class),
+                                Mockito.mock(ProjectLabel.class),
+                                Mockito.mock(ProjectLabel.class),
+                                Mockito.mock(ProjectLabel.class),
+                                Mockito.mock(ProjectLabel.class)
+                        )
                 )
         );
     }
 
     @Test
-    void shouldRejectBlankLabels() {
+    void shouldRejectNullLabels() {
         Task task = newTask();
 
         assertThrows(
                 IllegalArgumentException.class,
-                () -> task.replaceLabels(List.of("Backend", " "))
+                () -> task.replaceLabels(java.util.Arrays.asList(Mockito.mock(ProjectLabel.class), null))
         );
     }
 
