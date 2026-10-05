@@ -1,8 +1,13 @@
 package br.com.devtasker.api.task.service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,11 +18,14 @@ import br.com.devtasker.api.exception.BoardColumnNotFoundException;
 import br.com.devtasker.api.exception.BoardNotFoundException;
 import br.com.devtasker.api.exception.InvalidTaskAssigneeException;
 import br.com.devtasker.api.exception.InvalidTaskMoveException;
+import br.com.devtasker.api.exception.ProjectLabelException;
 import br.com.devtasker.api.exception.TaskNotFoundException;
 import br.com.devtasker.api.exception.TaskChecklistItemNotFoundException;
 import br.com.devtasker.api.exception.TaskChecklistLimitException;
 import br.com.devtasker.api.project.domain.ProjectMember;
 import br.com.devtasker.api.project.domain.ProjectMemberRole;
+import br.com.devtasker.api.project.domain.ProjectLabel;
+import br.com.devtasker.api.project.repository.ProjectLabelRepository;
 import br.com.devtasker.api.project.repository.ProjectMemberRepository;
 import br.com.devtasker.api.project.service.ProjectAccessService;
 import br.com.devtasker.api.task.domain.Task;
@@ -29,6 +37,7 @@ import br.com.devtasker.api.task.dto.MoveTaskRequest;
 import br.com.devtasker.api.task.dto.TaskResponse;
 import br.com.devtasker.api.task.dto.TaskChecklistItemResponse;
 import br.com.devtasker.api.task.dto.TaskUserSummaryResponse;
+import br.com.devtasker.api.task.dto.TaskLabelResponse;
 import br.com.devtasker.api.task.dto.UpdateTaskRequest;
 import br.com.devtasker.api.task.dto.UpdateTaskChecklistItemRequest;
 import br.com.devtasker.api.task.repository.TaskRepository;
@@ -45,6 +54,7 @@ public class TaskService {
     private final BoardRepository boardRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final TaskActivityRecorder activityRecorder;
+    private final ProjectLabelRepository projectLabelRepository;
 
     public TaskService(
             TaskRepository taskRepository,
@@ -53,7 +63,8 @@ public class TaskService {
             UserAccountRepository userAccountRepository,
             ProjectAccessService projectAccessService,
             ProjectMemberRepository projectMemberRepository,
-            TaskActivityRecorder activityRecorder
+            TaskActivityRecorder activityRecorder,
+            ProjectLabelRepository projectLabelRepository
     ) {
         this.taskRepository = taskRepository;
         this.boardColumnRepository = boardColumnRepository;
@@ -62,6 +73,7 @@ public class TaskService {
         this.projectAccessService = projectAccessService;
         this.projectMemberRepository = projectMemberRepository;
         this.activityRecorder = activityRecorder;
+        this.projectLabelRepository = projectLabelRepository;
     }
 
     @Transactional
@@ -102,7 +114,7 @@ public class TaskService {
         );
 
         task.assignTo(resolveAssignee(projectId, request.assigneeId()));
-        task.replaceLabels(request.labels());
+        task.replaceLabels(resolveLabels(projectId, request.labelIds()));
 
         Task createdTask = taskRepository.save(task);
         activityRecorder.record(
@@ -197,7 +209,9 @@ public class TaskService {
                 task.getPosition(),
                 toUserResponse(task.getCreator()),
                 toUserResponse(task.getAssignee()),
-                task.getLabels(),
+                task.getLabels().stream()
+                        .map(this::toLabelResponse)
+                        .toList(),
                 task.getChecklistItems().stream()
                         .map(this::toChecklistItemResponse)
                         .toList(),
@@ -216,6 +230,15 @@ public class TaskService {
                 item.getPosition(),
                 item.getCreatedAt(),
                 item.getUpdatedAt()
+        );
+    }
+
+    private TaskLabelResponse toLabelResponse(ProjectLabel label) {
+        return new TaskLabelResponse(
+                label.getId(),
+                label.getName(),
+                label.getColor(),
+                label.isArchived()
         );
     }
 
@@ -260,7 +283,21 @@ public class TaskService {
         );
 
         task.assignTo(resolveAssignee(projectId, request.assigneeId()));
-        task.replaceLabels(request.labels());
+
+        List<ProjectLabel> nextLabels = new ArrayList<>(
+                resolveLabels(projectId, request.labelIds())
+        );
+        task.getLabels().stream()
+                .filter(ProjectLabel::isArchived)
+                .filter(label -> !nextLabels.contains(label))
+                .forEach(nextLabels::add);
+
+        if (nextLabels.size() > Task.MAXIMUM_LABELS) {
+            throw invalidLabels(
+                    "Remova uma label ativa antes de adicionar outra; labels arquivadas ainda ocupam o limite da tarefa."
+            );
+        }
+        task.replaceLabels(nextLabels);
 
         Task updatedTask =
                 taskRepository.saveAndFlush(task);
@@ -449,6 +486,49 @@ public class TaskService {
         }
 
         return membership.getUser();
+    }
+
+    private List<ProjectLabel> resolveLabels(
+            Long projectId,
+            List<Long> requestedLabelIds
+    ) {
+        if (requestedLabelIds == null || requestedLabelIds.isEmpty()) {
+            return List.of();
+        }
+
+        LinkedHashSet<Long> labelIds = new LinkedHashSet<>(requestedLabelIds);
+        if (labelIds.contains(null) || labelIds.size() != requestedLabelIds.size()) {
+            throw invalidLabels("As labels da tarefa devem possuir identificadores únicos e válidos.");
+        }
+
+        if (labelIds.size() > Task.MAXIMUM_LABELS) {
+            throw invalidLabels("Uma tarefa pode possuir no máximo 5 labels.");
+        }
+
+        List<ProjectLabel> labels = projectLabelRepository
+                .findAllByIdInAndProject_IdAndArchivedAtIsNull(
+                        List.copyOf(labelIds),
+                        projectId
+                );
+
+        Map<Long, ProjectLabel> labelsById = labels.stream()
+                .collect(Collectors.toMap(ProjectLabel::getId, Function.identity()));
+
+        if (labelsById.size() != labelIds.size()) {
+            throw invalidLabels("Uma ou mais labels não pertencem ao projeto ou estão arquivadas.");
+        }
+
+        return labelIds.stream()
+                .map(labelsById::get)
+                .toList();
+    }
+
+    private ProjectLabelException invalidLabels(String message) {
+        return new ProjectLabelException(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_TASK_LABELS",
+                message
+        );
     }
 
     @Transactional

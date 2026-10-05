@@ -4,19 +4,16 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Objects;
 
 import br.com.devtasker.api.board.domain.BoardColumn;
+import br.com.devtasker.api.project.domain.ProjectLabel;
 import br.com.devtasker.api.user.domain.UserAccount;
-import jakarta.persistence.CollectionTable;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -25,7 +22,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OrderColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
@@ -44,8 +43,7 @@ import org.hibernate.annotations.BatchSize;
 public class Task {
 
     public static final int MAXIMUM_DESCRIPTION_LENGTH = 4000;
-    private static final int MAXIMUM_LABELS = 5;
-    private static final int MAXIMUM_LABEL_LENGTH = 30;
+    public static final int MAXIMUM_LABELS = 5;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -88,16 +86,16 @@ public class Task {
     @Column(name = "archived_at")
     private OffsetDateTime archivedAt;
 
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(
-            name = "task_labels",
-            joinColumns = @JoinColumn(name = "task_id")
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "task_label_assignments",
+            joinColumns = @JoinColumn(name = "task_id"),
+            inverseJoinColumns = @JoinColumn(name = "label_id")
     )
     @OrderColumn(name = "position")
-    @Column(name = "label", nullable = false, length = MAXIMUM_LABEL_LENGTH)
     @BatchSize(size = 50)
     @Getter(AccessLevel.NONE)
-    private List<String> labels = new ArrayList<>();
+    private List<ProjectLabel> labels = new ArrayList<>();
 
     @OneToMany(
             mappedBy = "task",
@@ -193,44 +191,27 @@ public class Task {
         this.assignee = assignee;
     }
 
-    public List<String> getLabels() {
+    public List<ProjectLabel> getLabels() {
         return List.copyOf(labels);
     }
 
-    public void replaceLabels(List<String> requestedLabels) {
-        Map<String, String> normalizedLabels = new LinkedHashMap<>();
+    public void replaceLabels(List<ProjectLabel> requestedLabels) {
+        LinkedHashSet<ProjectLabel> uniqueLabels = new LinkedHashSet<>(
+                requestedLabels == null ? List.of() : requestedLabels
+        );
 
-        if (requestedLabels != null) {
-            for (String requestedLabel : requestedLabels) {
-                if (requestedLabel == null || requestedLabel.isBlank()) {
-                    throw new IllegalArgumentException(
-                            "As labels da tarefa não podem estar vazias."
-                    );
-                }
-
-                String normalizedLabel = requestedLabel.trim();
-
-                if (normalizedLabel.length() > MAXIMUM_LABEL_LENGTH) {
-                    throw new IllegalArgumentException(
-                            "Cada label deve possuir no máximo 30 caracteres."
-                    );
-                }
-
-                normalizedLabels.putIfAbsent(
-                        normalizedLabel.toLowerCase(Locale.ROOT),
-                        normalizedLabel
-                );
-            }
+        if (uniqueLabels.contains(null)) {
+            throw new IllegalArgumentException("As labels da tarefa são inválidas.");
         }
 
-        if (normalizedLabels.size() > MAXIMUM_LABELS) {
+        if (uniqueLabels.size() > MAXIMUM_LABELS) {
             throw new IllegalArgumentException(
                     "Uma tarefa pode possuir no máximo 5 labels."
             );
         }
 
         labels.clear();
-        labels.addAll(normalizedLabels.values());
+        labels.addAll(uniqueLabels);
     }
 
     public List<TaskChecklistItem> getChecklistItems() {

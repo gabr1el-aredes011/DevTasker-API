@@ -13,6 +13,8 @@ import br.com.devtasker.api.task.domain.Task;
 public interface TaskRepository
         extends JpaRepository<Task, Long> {
 
+    long countByLabels_IdAndArchivedAtIsNull(Long labelId);
+
     List<Task>
     findAllByColumn_IdAndArchivedAtIsNullOrderByPositionAsc(
             Long columnId

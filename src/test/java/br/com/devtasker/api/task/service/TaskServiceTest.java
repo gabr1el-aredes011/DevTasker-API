@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -27,6 +28,9 @@ import br.com.devtasker.api.exception.InvalidTaskAssigneeException;
 import br.com.devtasker.api.project.domain.Project;
 import br.com.devtasker.api.project.domain.ProjectMember;
 import br.com.devtasker.api.project.domain.ProjectMemberRole;
+import br.com.devtasker.api.project.domain.ProjectLabel;
+import br.com.devtasker.api.project.domain.ProjectLabelColor;
+import br.com.devtasker.api.project.repository.ProjectLabelRepository;
 import br.com.devtasker.api.project.repository.ProjectMemberRepository;
 import br.com.devtasker.api.project.service.ProjectAccessService;
 import br.com.devtasker.api.task.domain.Task;
@@ -54,12 +58,16 @@ class TaskServiceTest {
     @Mock private ProjectAccessService projectAccessService;
     @Mock private ProjectMemberRepository projectMemberRepository;
     @Mock private TaskActivityRecorder activityRecorder;
+    @Mock private ProjectLabelRepository projectLabelRepository;
     @Mock private BoardColumn column;
     @Mock private Board board;
     @Mock private Project project;
     @Mock private UserAccount creator;
     @Mock private UserAccount assignee;
     @Mock private ProjectMember assigneeMembership;
+    @Mock private ProjectLabel backendLabel;
+    @Mock private ProjectLabel urgentLabel;
+    @Mock private ProjectLabel frontendLabel;
 
     private TaskService service;
 
@@ -72,12 +80,22 @@ class TaskServiceTest {
                 userAccountRepository,
                 projectAccessService,
                 projectMemberRepository,
-                activityRecorder
+                activityRecorder,
+                projectLabelRepository
         );
 
         when(column.getBoard()).thenReturn(board);
         when(board.getProject()).thenReturn(project);
         when(project.getId()).thenReturn(PROJECT_ID);
+        lenient().when(backendLabel.getId()).thenReturn(4L);
+        lenient().when(backendLabel.getName()).thenReturn("Backend");
+        lenient().when(backendLabel.getColor()).thenReturn(ProjectLabelColor.BLUE);
+        lenient().when(urgentLabel.getId()).thenReturn(5L);
+        lenient().when(urgentLabel.getName()).thenReturn("Urgente");
+        lenient().when(urgentLabel.getColor()).thenReturn(ProjectLabelColor.RED);
+        lenient().when(frontendLabel.getId()).thenReturn(6L);
+        lenient().when(frontendLabel.getName()).thenReturn("Frontend");
+        lenient().when(frontendLabel.getColor()).thenReturn(ProjectLabelColor.VIOLET);
     }
 
     @Test
@@ -96,6 +114,9 @@ class TaskServiceTest {
                     assertSame(assignee, task.getAssignee());
                     return task;
                 });
+        when(projectLabelRepository.findAllByIdInAndProject_IdAndArchivedAtIsNull(
+                List.of(4L, 5L), PROJECT_ID
+        )).thenReturn(List.of(backendLabel, urgentLabel));
 
         var response = service.create(
                 COLUMN_ID,
@@ -106,13 +127,16 @@ class TaskServiceTest {
                         TaskPriority.HIGH,
                         LocalDate.now().plusDays(2),
                         ASSIGNEE_ID,
-                        List.of("Backend", " urgente ", "backend")
+                        List.of(4L, 5L)
                 )
         );
 
         assertEquals(ASSIGNEE_ID, response.assignee().id());
         assertEquals("Bianca", response.assignee().name());
-        assertEquals(List.of("Backend", "urgente"), response.labels());
+        assertEquals(
+                List.of("Backend", "Urgente"),
+                response.labels().stream().map(label -> label.name()).toList()
+        );
         verify(projectAccessService).requireWriteAccess(PROJECT_ID, USER_ID);
     }
 
@@ -183,6 +207,9 @@ class TaskServiceTest {
 
         when(taskRepository.findActiveById(TASK_ID)).thenReturn(Optional.of(task));
         when(taskRepository.saveAndFlush(task)).thenReturn(task);
+        when(projectLabelRepository.findAllByIdInAndProject_IdAndArchivedAtIsNull(
+                List.of(6L), PROJECT_ID
+        )).thenReturn(List.of(frontendLabel));
 
         var response = service.update(
                 TASK_ID,
@@ -193,13 +220,13 @@ class TaskServiceTest {
                         TaskPriority.MEDIUM,
                         null,
                         null,
-                        List.of("Frontend")
+                        List.of(6L)
                 )
         );
 
         assertNull(response.assignee());
         assertNull(task.getAssignee());
-        assertEquals(List.of("Frontend"), response.labels());
+        assertEquals(List.of("Frontend"), response.labels().stream().map(label -> label.name()).toList());
         verify(projectAccessService).requireWriteAccess(PROJECT_ID, USER_ID);
     }
 

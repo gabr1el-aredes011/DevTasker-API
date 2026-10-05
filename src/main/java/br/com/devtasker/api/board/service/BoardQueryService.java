@@ -22,6 +22,7 @@ import br.com.devtasker.api.exception.BoardNotFoundException;
 import br.com.devtasker.api.exception.ProjectNotFoundException;
 import br.com.devtasker.api.project.repository.ProjectMemberRepository;
 import br.com.devtasker.api.task.domain.Task;
+import br.com.devtasker.api.task.dto.TaskLabelResponse;
 import br.com.devtasker.api.task.repository.TaskRepository;
 
 @Service
@@ -215,7 +216,14 @@ public class BoardQueryService {
                 task.getPosition(),
                 assignee == null ? null : assignee.getId(),
                 assignee == null ? null : assignee.getName(),
-                task.getLabels(),
+                task.getLabels().stream()
+                        .map(label -> new TaskLabelResponse(
+                                label.getId(),
+                                label.getName(),
+                                label.getColor(),
+                                label.isArchived()
+                        ))
+                        .toList(),
                 (int) task.getChecklistItems().stream()
                         .filter(item -> item.isCompleted())
                         .count(),

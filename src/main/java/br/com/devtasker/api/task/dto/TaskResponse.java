@@ -16,7 +16,7 @@ public record TaskResponse(
         Integer position,
         TaskUserSummaryResponse creator,
         TaskUserSummaryResponse assignee,
-        List<String> labels,
+        List<TaskLabelResponse> labels,
         List<TaskChecklistItemResponse> checklistItems,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt

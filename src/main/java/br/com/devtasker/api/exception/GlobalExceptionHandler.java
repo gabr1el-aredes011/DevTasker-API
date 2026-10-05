@@ -131,6 +131,23 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(exception.getStatus()).body(error);
     }
 
+    @ExceptionHandler(ProjectLabelException.class)
+    public ResponseEntity<ApiError> handleProjectLabel(
+            ProjectLabelException exception,
+            HttpServletRequest request
+    ) {
+        ApiError error = new ApiError(
+                exception.getStatus().value(),
+                exception.getErrorCode(),
+                exception.getMessage(),
+                request.getRequestURI(),
+                OffsetDateTime.now(ZoneOffset.UTC),
+                Map.of()
+        );
+
+        return ResponseEntity.status(exception.getStatus()).body(error);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidation(
             MethodArgumentNotValidException exception,

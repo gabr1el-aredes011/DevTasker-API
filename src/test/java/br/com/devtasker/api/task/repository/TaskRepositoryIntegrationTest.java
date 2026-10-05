@@ -16,6 +16,9 @@ import br.com.devtasker.api.board.domain.BoardColumnCategory;
 import br.com.devtasker.api.board.repository.BoardColumnRepository;
 import br.com.devtasker.api.board.repository.BoardRepository;
 import br.com.devtasker.api.project.domain.Project;
+import br.com.devtasker.api.project.domain.ProjectLabel;
+import br.com.devtasker.api.project.domain.ProjectLabelColor;
+import br.com.devtasker.api.project.repository.ProjectLabelRepository;
 import br.com.devtasker.api.project.repository.ProjectRepository;
 import br.com.devtasker.api.task.domain.Task;
 import br.com.devtasker.api.task.domain.TaskPriority;
@@ -31,6 +34,7 @@ class TaskRepositoryIntegrationTest {
 
     @Autowired private UserAccountRepository userAccountRepository;
     @Autowired private ProjectRepository projectRepository;
+    @Autowired private ProjectLabelRepository projectLabelRepository;
     @Autowired private BoardRepository boardRepository;
     @Autowired private BoardColumnRepository boardColumnRepository;
     @Autowired private TaskRepository taskRepository;
@@ -60,6 +64,12 @@ class TaskRepositoryIntegrationTest {
                         0
                 )
         );
+        ProjectLabel backend = projectLabelRepository.saveAndFlush(
+                ProjectLabel.create(project, "Backend", ProjectLabelColor.BLUE)
+        );
+        ProjectLabel urgent = projectLabelRepository.saveAndFlush(
+                ProjectLabel.create(project, "Urgente", ProjectLabelColor.RED)
+        );
         Task task = Task.create(
                 column,
                 owner,
@@ -69,7 +79,7 @@ class TaskRepositoryIntegrationTest {
                 null,
                 0
         );
-        task.replaceLabels(List.of("Backend", "Urgente"));
+        task.replaceLabels(List.of(backend, urgent));
         task.addChecklistItem("Preparar ambiente");
         task.addChecklistItem("Executar validação");
         task = taskRepository.saveAndFlush(task);
@@ -77,16 +87,28 @@ class TaskRepositoryIntegrationTest {
         entityManager.clear();
 
         Task persistedTask = taskRepository.findActiveById(task.getId()).orElseThrow();
-        assertEquals(List.of("Backend", "Urgente"), persistedTask.getLabels());
+        assertEquals(
+                List.of("Backend", "Urgente"),
+                persistedTask.getLabels().stream().map(ProjectLabel::getName).toList()
+        );
         assertEquals(2, persistedTask.getChecklistItems().size());
         assertEquals("Preparar ambiente", persistedTask.getChecklistItems().getFirst().getTitle());
         assertEquals(0, persistedTask.getChecklistItems().getFirst().getPosition());
 
-        persistedTask.replaceLabels(List.of("Frontend", "Melhoria"));
+        ProjectLabel frontend = projectLabelRepository.saveAndFlush(
+                ProjectLabel.create(project, "Frontend", ProjectLabelColor.VIOLET)
+        );
+        ProjectLabel improvement = projectLabelRepository.saveAndFlush(
+                ProjectLabel.create(project, "Melhoria", ProjectLabelColor.GREEN)
+        );
+        persistedTask.replaceLabels(List.of(frontend, improvement));
         taskRepository.saveAndFlush(persistedTask);
         entityManager.clear();
 
         Task updatedTask = taskRepository.findActiveById(task.getId()).orElseThrow();
-        assertEquals(List.of("Frontend", "Melhoria"), updatedTask.getLabels());
+        assertEquals(
+                List.of("Frontend", "Melhoria"),
+                updatedTask.getLabels().stream().map(ProjectLabel::getName).toList()
+        );
     }
 }
