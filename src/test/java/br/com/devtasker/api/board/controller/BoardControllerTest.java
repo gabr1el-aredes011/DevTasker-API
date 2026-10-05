@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 import br.com.devtasker.api.board.dto.UpdateBoardRequest;
+import br.com.devtasker.api.board.realtime.BoardRealtimeBroker;
 import br.com.devtasker.api.board.service.BoardCommandService;
 import br.com.devtasker.api.board.service.BoardQueryService;
 
@@ -30,6 +31,9 @@ class BoardControllerTest {
     private BoardCommandService boardCommandService;
 
     @Mock
+    private BoardRealtimeBroker boardRealtimeBroker;
+
+    @Mock
     private Jwt jwt;
 
     private BoardController controller;
@@ -38,7 +42,8 @@ class BoardControllerTest {
     void setUp() {
         controller = new BoardController(
                 boardQueryService,
-                boardCommandService
+                boardCommandService,
+                boardRealtimeBroker
         );
 
         when(jwt.getClaim("user_id"))
@@ -93,5 +98,12 @@ class BoardControllerTest {
                 BOARD_ID,
                 USER_ID
         );
+    }
+
+    @Test
+    void shouldOpenAuthenticatedBoardEventStream() {
+        controller.streamEvents(BOARD_ID, jwt);
+
+        verify(boardRealtimeBroker).subscribe(BOARD_ID, USER_ID);
     }
 }
