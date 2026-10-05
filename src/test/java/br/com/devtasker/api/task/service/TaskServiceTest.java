@@ -53,6 +53,7 @@ class TaskServiceTest {
     @Mock private UserAccountRepository userAccountRepository;
     @Mock private ProjectAccessService projectAccessService;
     @Mock private ProjectMemberRepository projectMemberRepository;
+    @Mock private TaskActivityRecorder activityRecorder;
     @Mock private BoardColumn column;
     @Mock private Board board;
     @Mock private Project project;
@@ -70,7 +71,8 @@ class TaskServiceTest {
                 boardRepository,
                 userAccountRepository,
                 projectAccessService,
-                projectMemberRepository
+                projectMemberRepository,
+                activityRecorder
         );
 
         when(column.getBoard()).thenReturn(board);

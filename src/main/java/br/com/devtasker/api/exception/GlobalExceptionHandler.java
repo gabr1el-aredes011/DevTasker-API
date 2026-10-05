@@ -326,6 +326,23 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest().body(error);
     }
+
+    @ExceptionHandler(TaskCommentNotFoundException.class)
+    public ResponseEntity<ApiError> handleTaskCommentNotFound(
+            TaskCommentNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        ApiError error = new ApiError(
+                HttpStatus.NOT_FOUND.value(),
+                "TASK_COMMENT_NOT_FOUND",
+                exception.getMessage(),
+                request.getRequestURI(),
+                OffsetDateTime.now(ZoneOffset.UTC),
+                Map.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
     
     @ExceptionHandler(InvalidTaskMoveException.class)
     public ResponseEntity<ApiError> handleInvalidTaskMove(
