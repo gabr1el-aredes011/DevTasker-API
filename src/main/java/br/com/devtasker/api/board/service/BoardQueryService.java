@@ -224,6 +224,7 @@ public class BoardQueryService {
                                 label.isArchived()
                         ))
                         .toList(),
+                task.getTechnologies(),
                 (int) task.getChecklistItems().stream()
                         .filter(item -> item.isCompleted())
                         .count(),

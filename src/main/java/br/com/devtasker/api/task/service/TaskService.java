@@ -121,6 +121,7 @@ public class TaskService {
 
         task.assignTo(resolveAssignee(projectId, request.assigneeId()));
         task.replaceLabels(resolveLabels(projectId, request.labelIds()));
+        task.replaceTechnologies(request.technologies());
 
         Task createdTask = taskRepository.save(task);
         activityRecorder.record(
@@ -219,6 +220,7 @@ public class TaskService {
                 task.getLabels().stream()
                         .map(this::toLabelResponse)
                         .toList(),
+                task.getTechnologies(),
                 task.getChecklistItems().stream()
                         .map(this::toChecklistItemResponse)
                         .toList(),
@@ -305,6 +307,7 @@ public class TaskService {
             );
         }
         task.replaceLabels(nextLabels);
+        task.replaceTechnologies(request.technologies());
 
         Task updatedTask =
                 taskRepository.saveAndFlush(task);

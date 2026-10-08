@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 import br.com.devtasker.api.task.domain.TaskPriority;
+import br.com.devtasker.api.task.domain.TaskTechnology;
 
 public record TaskResponse(
         Long id,
@@ -17,6 +18,7 @@ public record TaskResponse(
         TaskUserSummaryResponse creator,
         TaskUserSummaryResponse assignee,
         List<TaskLabelResponse> labels,
+        List<TaskTechnology> technologies,
         List<TaskChecklistItemResponse> checklistItems,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt

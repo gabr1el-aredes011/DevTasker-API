@@ -5,6 +5,7 @@ import java.util.List;
 
 import br.com.devtasker.api.task.domain.Task;
 import br.com.devtasker.api.task.domain.TaskPriority;
+import br.com.devtasker.api.task.domain.TaskTechnology;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -35,7 +36,13 @@ public record UpdateTaskRequest(
                 max = 5,
                 message = "Uma tarefa pode possuir no máximo 5 labels."
         )
-        List<@NotNull(message = "Os identificadores das labels são obrigatórios.") Long> labelIds
+        List<@NotNull(message = "Os identificadores das labels são obrigatórios.") Long> labelIds,
+
+        @Size(
+                max = Task.MAXIMUM_TECHNOLOGIES,
+                message = "Uma tarefa pode possuir no máximo 8 tecnologias."
+        )
+        List<@NotNull(message = "As tecnologias selecionadas são obrigatórias.") TaskTechnology> technologies
 
 ) {
 }

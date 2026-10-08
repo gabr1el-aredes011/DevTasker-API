@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import br.com.devtasker.api.task.domain.TaskPriority;
+import br.com.devtasker.api.task.domain.TaskTechnology;
 import br.com.devtasker.api.task.dto.TaskLabelResponse;
 
 public record KanbanTaskResponse(
@@ -15,6 +16,7 @@ public record KanbanTaskResponse(
         Long assigneeId,
         String assigneeName,
         List<TaskLabelResponse> labels,
+        List<TaskTechnology> technologies,
         int completedChecklistItems,
         int totalChecklistItems
 ) {

@@ -37,6 +37,7 @@ import br.com.devtasker.api.project.repository.ProjectMemberRepository;
 import br.com.devtasker.api.project.service.ProjectAccessService;
 import br.com.devtasker.api.task.domain.Task;
 import br.com.devtasker.api.task.domain.TaskPriority;
+import br.com.devtasker.api.task.domain.TaskTechnology;
 import br.com.devtasker.api.task.dto.CreateTaskRequest;
 import br.com.devtasker.api.task.dto.CreateTaskChecklistItemRequest;
 import br.com.devtasker.api.task.dto.UpdateTaskRequest;
@@ -131,7 +132,8 @@ class TaskServiceTest {
                         TaskPriority.HIGH,
                         LocalDate.now().plusDays(2),
                         ASSIGNEE_ID,
-                        List.of(4L, 5L)
+                        List.of(4L, 5L),
+                        List.of(TaskTechnology.JAVA, TaskTechnology.ANGULAR)
                 )
         );
 
@@ -140,6 +142,10 @@ class TaskServiceTest {
         assertEquals(
                 List.of("Backend", "Urgente"),
                 response.labels().stream().map(label -> label.name()).toList()
+        );
+        assertEquals(
+                List.of(TaskTechnology.JAVA, TaskTechnology.ANGULAR),
+                response.technologies()
         );
         verify(projectAccessService).requireWriteAccess(PROJECT_ID, USER_ID);
         verify(eventPublisher).publishEvent(any(BoardRealtimeEvent.class));
@@ -163,6 +169,7 @@ class TaskServiceTest {
                                 TaskPriority.MEDIUM,
                                 null,
                                 ASSIGNEE_ID,
+                                List.of(),
                                 List.of()
                         )
                 )
@@ -188,6 +195,7 @@ class TaskServiceTest {
                                 TaskPriority.MEDIUM,
                                 null,
                                 ASSIGNEE_ID,
+                                List.of(),
                                 List.of()
                         )
                 )
@@ -225,7 +233,8 @@ class TaskServiceTest {
                         TaskPriority.MEDIUM,
                         null,
                         null,
-                        List.of(6L)
+                        List.of(6L),
+                        List.of()
                 )
         );
 

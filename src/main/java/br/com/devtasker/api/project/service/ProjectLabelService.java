@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.devtasker.api.exception.ProjectLabelException;
 import br.com.devtasker.api.project.domain.ProjectLabel;
+import br.com.devtasker.api.project.domain.ProjectLabelColor;
 import br.com.devtasker.api.project.dto.CreateProjectLabelRequest;
 import br.com.devtasker.api.project.dto.ProjectLabelResponse;
 import br.com.devtasker.api.project.dto.UpdateProjectLabelRequest;
@@ -56,7 +57,7 @@ public class ProjectLabelService {
         ProjectLabel label = ProjectLabel.create(
                 membership.getProject(),
                 request.name(),
-                request.color()
+                nextAutomaticColor(projectId)
         );
 
         return toResponse(save(label));
@@ -73,7 +74,7 @@ public class ProjectLabelService {
         ProjectLabel label = findActive(projectId, labelId);
         ensureNameAvailable(projectId, request.name(), labelId);
 
-        label.update(request.name(), request.color());
+        label.update(request.name(), label.getColor());
         return toResponse(save(label));
     }
 
@@ -118,6 +119,13 @@ public class ProjectLabelService {
         } catch (DataIntegrityViolationException exception) {
             throw duplicateName();
         }
+    }
+
+    private ProjectLabelColor nextAutomaticColor(Long projectId) {
+        ProjectLabelColor[] palette = ProjectLabelColor.values();
+        long activeLabelCount = projectLabelRepository
+                .countByProject_IdAndArchivedAtIsNull(projectId);
+        return palette[(int) (activeLabelCount % palette.length)];
     }
 
     private ProjectLabelException duplicateName() {
