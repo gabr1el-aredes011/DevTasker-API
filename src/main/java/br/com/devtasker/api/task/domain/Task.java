@@ -14,6 +14,8 @@ import br.com.devtasker.api.project.domain.ProjectLabel;
 import br.com.devtasker.api.user.domain.UserAccount;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -44,6 +46,7 @@ public class Task {
 
     public static final int MAXIMUM_DESCRIPTION_LENGTH = 4000;
     public static final int MAXIMUM_LABELS = 5;
+    public static final int MAXIMUM_TECHNOLOGIES = 8;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -96,6 +99,18 @@ public class Task {
     @BatchSize(size = 50)
     @Getter(AccessLevel.NONE)
     private List<ProjectLabel> labels = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "task_technologies",
+            joinColumns = @JoinColumn(name = "task_id")
+    )
+    @Enumerated(EnumType.STRING)
+    @Column(name = "technology", nullable = false, length = 32)
+    @OrderColumn(name = "position")
+    @BatchSize(size = 50)
+    @Getter(AccessLevel.NONE)
+    private List<TaskTechnology> technologies = new ArrayList<>();
 
     @OneToMany(
             mappedBy = "task",
@@ -212,6 +227,29 @@ public class Task {
 
         labels.clear();
         labels.addAll(uniqueLabels);
+    }
+
+    public List<TaskTechnology> getTechnologies() {
+        return List.copyOf(technologies);
+    }
+
+    public void replaceTechnologies(List<TaskTechnology> requestedTechnologies) {
+        LinkedHashSet<TaskTechnology> uniqueTechnologies = new LinkedHashSet<>(
+                requestedTechnologies == null ? List.of() : requestedTechnologies
+        );
+
+        if (uniqueTechnologies.contains(null)) {
+            throw new IllegalArgumentException("As tecnologias da tarefa são inválidas.");
+        }
+
+        if (uniqueTechnologies.size() > MAXIMUM_TECHNOLOGIES) {
+            throw new IllegalArgumentException(
+                    "Uma tarefa pode possuir no máximo 8 tecnologias."
+            );
+        }
+
+        technologies.clear();
+        technologies.addAll(uniqueTechnologies);
     }
 
     public List<TaskChecklistItem> getChecklistItems() {

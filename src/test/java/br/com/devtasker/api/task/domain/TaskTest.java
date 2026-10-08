@@ -57,6 +57,42 @@ class TaskTest {
     }
 
     @Test
+    void shouldKeepTechnologiesUniqueAndInTheSelectedOrder() {
+        Task task = newTask();
+
+        task.replaceTechnologies(List.of(
+                TaskTechnology.JAVA,
+                TaskTechnology.ANGULAR,
+                TaskTechnology.JAVA
+        ));
+
+        assertEquals(
+                List.of(TaskTechnology.JAVA, TaskTechnology.ANGULAR),
+                task.getTechnologies()
+        );
+    }
+
+    @Test
+    void shouldRejectMoreThanEightTechnologies() {
+        Task task = newTask();
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> task.replaceTechnologies(List.of(
+                        TaskTechnology.ANGULAR,
+                        TaskTechnology.REACT,
+                        TaskTechnology.VUE,
+                        TaskTechnology.TYPESCRIPT,
+                        TaskTechnology.JAVASCRIPT,
+                        TaskTechnology.JAVA,
+                        TaskTechnology.SPRING,
+                        TaskTechnology.PYTHON,
+                        TaskTechnology.DOCKER
+                ))
+        );
+    }
+
+    @Test
     void shouldManageChecklistItemsInsideTaskAggregate() {
         Task task = newTask();
 
