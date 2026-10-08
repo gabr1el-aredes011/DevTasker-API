@@ -9,6 +9,8 @@ import br.com.devtasker.api.project.domain.ProjectLabel;
 
 public interface ProjectLabelRepository extends JpaRepository<ProjectLabel, Long> {
 
+    long countByProject_IdAndArchivedAtIsNull(Long projectId);
+
     List<ProjectLabel> findAllByProject_IdAndArchivedAtIsNullOrderByNameAscIdAsc(Long projectId);
 
     List<ProjectLabel> findAllByIdInAndProject_IdAndArchivedAtIsNull(

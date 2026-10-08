@@ -60,12 +60,32 @@ class ProjectLabelServiceTest {
         var response = service.create(
                 PROJECT_ID,
                 USER_ID,
-                new CreateProjectLabelRequest("  Backend  ", ProjectLabelColor.BLUE)
+                new CreateProjectLabelRequest("  Backend  ")
         );
 
         assertEquals("Backend", response.name());
-        assertEquals(ProjectLabelColor.BLUE, response.color());
+        assertEquals(ProjectLabelColor.GREEN, response.color());
         verify(projectAccessService).requireManagementAccess(PROJECT_ID, USER_ID);
+        verify(projectLabelRepository).countByProject_IdAndArchivedAtIsNull(PROJECT_ID);
+    }
+
+    @Test
+    void shouldRotateAutomaticColorsAsTheCatalogGrows() {
+        when(projectAccessService.requireManagementAccess(PROJECT_ID, USER_ID))
+                .thenReturn(membership);
+        when(membership.getProject()).thenReturn(project);
+        when(projectLabelRepository.countByProject_IdAndArchivedAtIsNull(PROJECT_ID))
+                .thenReturn(3L);
+        when(projectLabelRepository.saveAndFlush(org.mockito.ArgumentMatchers.any(ProjectLabel.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.create(
+                PROJECT_ID,
+                USER_ID,
+                new CreateProjectLabelRequest("Frontend")
+        );
+
+        assertEquals(ProjectLabelColor.AMBER, response.color());
     }
 
     @Test
@@ -82,7 +102,7 @@ class ProjectLabelServiceTest {
                 () -> service.create(
                         PROJECT_ID,
                         USER_ID,
-                        new CreateProjectLabelRequest("BACKEND", ProjectLabelColor.GREEN)
+                        new CreateProjectLabelRequest("BACKEND")
                 )
         );
 
@@ -101,12 +121,12 @@ class ProjectLabelServiceTest {
                 PROJECT_ID,
                 LABEL_ID,
                 USER_ID,
-                new UpdateProjectLabelRequest("API", ProjectLabelColor.VIOLET)
+                new UpdateProjectLabelRequest("API")
         );
         service.archive(PROJECT_ID, LABEL_ID, USER_ID);
 
         assertEquals("API", response.name());
-        assertEquals(ProjectLabelColor.VIOLET, response.color());
+        assertEquals(ProjectLabelColor.BLUE, response.color());
         assertEquals(true, label.isArchived());
         verify(projectAccessService, org.mockito.Mockito.times(2))
                 .requireManagementAccess(PROJECT_ID, USER_ID);
