@@ -3,6 +3,7 @@ package br.com.devtasker.api.task.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -116,6 +117,31 @@ class TaskCollaborationServiceTest {
                 "adicionou um comentário."
         );
         verify(task).recordActivity();
+    }
+
+    @Test
+    void shouldReplyToAnExistingCommentInTheSameTask() {
+        when(projectAccessService.requireWriteAccess(PROJECT_ID, USER_ID))
+                .thenReturn(membership);
+        when(membership.getRole()).thenReturn(ProjectMemberRole.MEMBER);
+        when(commentRepository.findByIdAndTask_IdAndDeletedAtIsNull(4L, TASK_ID))
+                .thenReturn(Optional.of(comment));
+        when(comment.getTask()).thenReturn(task);
+        when(comment.root()).thenReturn(comment);
+
+        service.addComment(
+                TASK_ID,
+                USER_ID,
+                new TaskCommentRequest("Resposta com contexto.", 4L)
+        );
+
+        verify(commentRepository).save(argThat(saved -> saved.getParentComment() == comment));
+        verify(activityRecorder).record(
+                task,
+                user,
+                TaskActivityType.COMMENT_ADDED,
+                "respondeu a um comentário."
+        );
     }
 
     @Test

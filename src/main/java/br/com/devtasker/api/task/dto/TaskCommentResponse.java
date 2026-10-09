@@ -6,6 +6,8 @@ public record TaskCommentResponse(
         Long id,
         String content,
         TaskUserSummaryResponse author,
+        Long parentCommentId,
+        TaskUserSummaryResponse replyToAuthor,
         boolean canEdit,
         boolean canDelete,
         boolean edited,

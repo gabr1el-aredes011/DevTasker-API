@@ -39,6 +39,10 @@ public class TaskComment {
     @JoinColumn(name = "author_id", nullable = false)
     private UserAccount author;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_comment_id")
+    private TaskComment parentComment;
+
     @Column(nullable = false, length = MAXIMUM_CONTENT_LENGTH)
     private String content;
 
@@ -54,18 +58,45 @@ public class TaskComment {
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
-    private TaskComment(Task task, UserAccount author, String content) {
+    private TaskComment(
+            Task task,
+            UserAccount author,
+            TaskComment parentComment,
+            String content
+    ) {
         if (task == null || author == null) {
             throw new IllegalArgumentException("O comentário deve possuir tarefa e autor.");
         }
 
+        if (parentComment != null && parentComment.getTask() != task) {
+            throw new IllegalArgumentException("A resposta deve pertencer à mesma tarefa.");
+        }
+
         this.task = task;
         this.author = author;
+        this.parentComment = parentComment == null ? null : parentComment.root();
         changeContent(content);
     }
 
     public static TaskComment create(Task task, UserAccount author, String content) {
-        return new TaskComment(task, author, content);
+        return new TaskComment(task, author, null, content);
+    }
+
+    public static TaskComment replyTo(
+            Task task,
+            UserAccount author,
+            TaskComment parentComment,
+            String content
+    ) {
+        if (parentComment == null) {
+            throw new IllegalArgumentException("A resposta deve possuir um comentário de origem.");
+        }
+
+        return new TaskComment(task, author, parentComment, content);
+    }
+
+    public TaskComment root() {
+        return parentComment == null ? this : parentComment;
     }
 
     public void edit(String content) {

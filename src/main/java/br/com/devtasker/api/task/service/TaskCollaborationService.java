@@ -69,13 +69,19 @@ public class TaskCollaborationService {
                 userId
         );
         UserAccount author = membership.getUser();
+        TaskComment replyTarget = request.parentCommentId() == null
+                ? null
+                : findComment(taskId, request.parentCommentId());
+        TaskComment comment = replyTarget == null
+                ? TaskComment.create(task, author, request.content())
+                : TaskComment.replyTo(task, author, replyTarget, request.content());
 
-        commentRepository.save(TaskComment.create(task, author, request.content()));
+        commentRepository.save(comment);
         activityRecorder.record(
                 task,
                 author,
                 TaskActivityType.COMMENT_ADDED,
-                "adicionou um comentário."
+                replyTarget == null ? "adicionou um comentário." : "respondeu a um comentário."
         );
         task.recordActivity();
         taskRepository.save(task);
@@ -181,6 +187,10 @@ public class TaskCollaborationService {
                 comment.getId(),
                 comment.getContent(),
                 toUserResponse(comment.getAuthor()),
+                comment.getParentComment() == null ? null : comment.getParentComment().getId(),
+                comment.getParentComment() == null
+                        ? null
+                        : toUserResponse(comment.getParentComment().getAuthor()),
                 canEdit,
                 canDelete,
                 comment.getEditedAt() != null,
