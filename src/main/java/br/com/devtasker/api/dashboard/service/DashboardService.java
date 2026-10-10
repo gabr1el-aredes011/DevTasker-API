@@ -52,6 +52,9 @@ public class DashboardService {
                         ),
 
                 dashboardQueryRepository
+                        .findRecentActivities(userId),
+
+                dashboardQueryRepository
                         .findWorkflow(userId)
         );
     }

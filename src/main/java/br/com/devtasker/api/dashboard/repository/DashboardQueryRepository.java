@@ -8,12 +8,14 @@ import java.util.Map;
 import org.springframework.stereotype.Repository;
 
 import br.com.devtasker.api.board.domain.BoardColumnCategory;
+import br.com.devtasker.api.dashboard.dto.DashboardActivityResponse;
 import br.com.devtasker.api.dashboard.dto.DashboardAttentionTaskResponse;
 import br.com.devtasker.api.dashboard.dto.DashboardRecentProjectResponse;
 import br.com.devtasker.api.dashboard.dto.DashboardTaskMetricsResponse;
 import br.com.devtasker.api.dashboard.dto.DashboardWorkflowResponse;
 import br.com.devtasker.api.project.domain.ProjectMember;
 import br.com.devtasker.api.task.domain.Task;
+import br.com.devtasker.api.task.domain.TaskActivity;
 import br.com.devtasker.api.task.domain.TaskPriority;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -23,6 +25,7 @@ public class DashboardQueryRepository {
 
     private static final int RECENT_PROJECT_LIMIT = 5;
     private static final int ATTENTION_TASK_LIMIT = 5;
+    private static final int RECENT_ACTIVITY_LIMIT = 8;
     
     @PersistenceContext
     private EntityManager entityManager;
@@ -391,6 +394,60 @@ public class DashboardQueryRepository {
                             project.getName(),
 
                             overdue
+                    );
+                })
+                .toList();
+    }
+
+    public List<DashboardActivityResponse> findRecentActivities(
+            Long userId
+    ) {
+        return entityManager
+                .createQuery(
+                        """
+                        SELECT activity
+                        FROM TaskActivity activity
+                        JOIN FETCH activity.actor actor
+                        JOIN FETCH activity.task task
+                        JOIN FETCH task.column boardColumn
+                        JOIN FETCH boardColumn.board board
+                        JOIN FETCH board.project project
+                        WHERE task.archivedAt IS NULL
+                          AND board.archivedAt IS NULL
+                          AND project.archivedAt IS NULL
+                          AND EXISTS (
+                              SELECT membership.id
+                              FROM ProjectMember membership
+                              WHERE membership.project = project
+                                AND membership.user.id = :userId
+                          )
+                        ORDER BY activity.createdAt DESC, activity.id DESC
+                        """,
+                        TaskActivity.class
+                )
+                .setParameter("userId", userId)
+                .setMaxResults(RECENT_ACTIVITY_LIMIT)
+                .getResultList()
+                .stream()
+                .map(activity -> {
+                    Task task = activity.getTask();
+                    var board = task.getColumn().getBoard();
+                    var project = board.getProject();
+                    var actor = activity.getActor();
+
+                    return new DashboardActivityResponse(
+                            activity.getId(),
+                            activity.getType(),
+                            activity.getDescription(),
+                            activity.getCreatedAt(),
+                            actor.getId(),
+                            actor.getName(),
+                            actor.getProfileImageUrl(),
+                            task.getId(),
+                            task.getTitle(),
+                            board.getId(),
+                            project.getId(),
+                            project.getName()
                     );
                 })
                 .toList();

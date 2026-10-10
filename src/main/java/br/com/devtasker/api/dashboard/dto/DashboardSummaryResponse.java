@@ -8,6 +8,7 @@ public record DashboardSummaryResponse(
         DashboardTaskMetricsResponse taskMetrics,
         List<DashboardRecentProjectResponse> recentProjects,
         List<DashboardAttentionTaskResponse> attentionTasks,
+        List<DashboardActivityResponse> recentActivities,
         DashboardWorkflowResponse workflow
 ) {
 }

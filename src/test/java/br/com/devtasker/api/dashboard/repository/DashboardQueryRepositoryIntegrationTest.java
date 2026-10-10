@@ -27,7 +27,10 @@ import br.com.devtasker.api.project.repository.ProjectMemberRepository;
 import br.com.devtasker.api.project.repository.ProjectRepository;
 import br.com.devtasker.api.project.service.ProjectQueryService;
 import br.com.devtasker.api.task.domain.Task;
+import br.com.devtasker.api.task.domain.TaskActivity;
+import br.com.devtasker.api.task.domain.TaskActivityType;
 import br.com.devtasker.api.task.domain.TaskPriority;
+import br.com.devtasker.api.task.repository.TaskActivityRepository;
 import br.com.devtasker.api.task.repository.TaskRepository;
 import br.com.devtasker.api.task.service.TaskService;
 import br.com.devtasker.api.user.domain.UserAccount;
@@ -60,6 +63,9 @@ class DashboardQueryRepositoryIntegrationTest {
 
     @Autowired
     private TaskRepository taskRepository;
+
+    @Autowired
+    private TaskActivityRepository taskActivityRepository;
 
     @Autowired
     private ProjectQueryService projectQueryService;
@@ -241,6 +247,75 @@ class DashboardQueryRepositoryIntegrationTest {
                         owner.getId()
                 )
         );
+    }
+
+    @Test
+    void shouldReturnRecentActivityOnlyFromAccessibleProjects() {
+        UserAccount owner = userAccountRepository.saveAndFlush(
+                UserAccount.create(
+                        "Gabriel",
+                        "gabriel.activity@devtasker.test",
+                        "encoded-password"
+                )
+        );
+        UserAccount outsider = userAccountRepository.saveAndFlush(
+                UserAccount.create(
+                        "Bianca",
+                        "bianca.activity@devtasker.test",
+                        "encoded-password"
+                )
+        );
+        Project project = projectRepository.saveAndFlush(
+                Project.create("Activity stream", "Projeto ativo", owner)
+        );
+        projectMemberRepository.saveAndFlush(
+                ProjectMember.createOwner(project, owner)
+        );
+        Board board = boardRepository.saveAndFlush(Board.createInitial(project));
+        BoardColumn column = boardColumnRepository.saveAndFlush(
+                BoardColumn.create(
+                        board,
+                        "Em desenvolvimento",
+                        BoardColumnCategory.DOING,
+                        0
+                )
+        );
+        Task task = taskRepository.saveAndFlush(
+                Task.create(
+                        column,
+                        owner,
+                        "Consolidar telemetria",
+                        null,
+                        TaskPriority.MEDIUM,
+                        null,
+                        0
+                )
+        );
+        TaskActivity activity = taskActivityRepository.saveAndFlush(
+                TaskActivity.create(
+                        task,
+                        owner,
+                        TaskActivityType.TASK_UPDATED,
+                        "atualizou a tarefa."
+                )
+        );
+        entityManager.clear();
+
+        var ownerActivities = dashboardQueryRepository.findRecentActivities(owner.getId());
+
+        assertEquals(1, ownerActivities.size());
+        assertEquals(activity.getId(), ownerActivities.getFirst().id());
+        assertEquals(owner.getId(), ownerActivities.getFirst().actorId());
+        assertEquals(task.getId(), ownerActivities.getFirst().taskId());
+        assertEquals(board.getId(), ownerActivities.getFirst().boardId());
+        assertEquals(project.getId(), ownerActivities.getFirst().projectId());
+        assertTrue(dashboardQueryRepository.findRecentActivities(outsider.getId()).isEmpty());
+
+        board.archive();
+        boardRepository.saveAndFlush(board);
+        entityManager.clear();
+
+        assertTrue(dashboardQueryRepository.findRecentActivities(owner.getId()).isEmpty());
     }
 
     private void assertVisibleDashboard(
