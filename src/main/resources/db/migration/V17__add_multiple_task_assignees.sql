@@ -1,9 +1,13 @@
 CREATE TABLE task_assignees (
     task_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
+    position INTEGER NOT NULL,
 
     CONSTRAINT pk_task_assignees
         PRIMARY KEY (task_id, user_id),
+
+    CONSTRAINT uk_task_assignees_position
+        UNIQUE (task_id, position),
 
     CONSTRAINT fk_task_assignees_task
         FOREIGN KEY (task_id)
@@ -15,8 +19,8 @@ CREATE TABLE task_assignees (
         REFERENCES users(id)
 );
 
-INSERT INTO task_assignees (task_id, user_id)
-SELECT id, assignee_id
+INSERT INTO task_assignees (task_id, user_id, position)
+SELECT id, assignee_id, 0
 FROM tasks
 WHERE assignee_id IS NOT NULL;
 
