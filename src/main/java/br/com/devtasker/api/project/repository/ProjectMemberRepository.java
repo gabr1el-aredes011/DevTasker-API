@@ -71,6 +71,19 @@ public interface ProjectMemberRepository
     );
 
     @Query("""
+            SELECT membership
+            FROM ProjectMember membership
+            JOIN FETCH membership.user user
+            WHERE membership.project.id = :projectId
+              AND membership.project.archivedAt IS NULL
+              AND user.id IN :userIds
+            """)
+    List<ProjectMember> findActiveMemberships(
+            @Param("projectId") Long projectId,
+            @Param("userIds") List<Long> userIds
+    );
+
+    @Query("""
             SELECT CASE WHEN COUNT(membership) > 0 THEN true ELSE false END
             FROM ProjectMember membership
             WHERE membership.project.id = :projectId

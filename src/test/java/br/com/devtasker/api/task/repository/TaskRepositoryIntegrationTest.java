@@ -111,4 +111,56 @@ class TaskRepositoryIntegrationTest {
                 updatedTask.getLabels().stream().map(ProjectLabel::getName).toList()
         );
     }
+
+    @Test
+    void shouldPersistMultipleAssigneesAndClearOnlyTheRemovedMember() {
+        UserAccount owner = userAccountRepository.saveAndFlush(
+                UserAccount.create(
+                        "Gabriel",
+                        "gabriel.assignees@devtasker.test",
+                        "encoded-password"
+                )
+        );
+        UserAccount teammate = userAccountRepository.saveAndFlush(
+                UserAccount.create(
+                        "Bianca",
+                        "bianca.assignees@devtasker.test",
+                        "encoded-password"
+                )
+        );
+        Project project = projectRepository.saveAndFlush(
+                Project.create("Responsáveis", null, owner)
+        );
+        Board board = boardRepository.saveAndFlush(Board.createInitial(project));
+        BoardColumn column = boardColumnRepository.saveAndFlush(
+                BoardColumn.create(board, "Backlog", BoardColumnCategory.BACKLOG, 0)
+        );
+        Task task = Task.create(
+                column,
+                owner,
+                "Desenvolver em conjunto",
+                null,
+                TaskPriority.HIGH,
+                null,
+                0
+        );
+        task.replaceAssignees(List.of(owner, teammate));
+        task = taskRepository.saveAndFlush(task);
+        entityManager.clear();
+
+        Task persistedTask = taskRepository.findActiveById(task.getId()).orElseThrow();
+        assertEquals(
+                List.of("Bianca", "Gabriel"),
+                persistedTask.getAssignees().stream().map(UserAccount::getName).toList()
+        );
+
+        taskRepository.clearAssigneeByProjectAndUser(project.getId(), teammate.getId());
+        entityManager.clear();
+
+        Task updatedTask = taskRepository.findActiveById(task.getId()).orElseThrow();
+        assertEquals(
+                List.of("Gabriel"),
+                updatedTask.getAssignees().stream().map(UserAccount::getName).toList()
+        );
+    }
 }

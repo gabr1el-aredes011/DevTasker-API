@@ -1,7 +1,6 @@
 package br.com.devtasker.api.task.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -53,6 +52,7 @@ class TaskServiceTest {
     private static final Long TASK_ID = 19L;
     private static final Long USER_ID = 2L;
     private static final Long ASSIGNEE_ID = 3L;
+    private static final Long SECOND_ASSIGNEE_ID = 4L;
 
     @Mock private TaskRepository taskRepository;
     @Mock private BoardColumnRepository boardColumnRepository;
@@ -69,6 +69,8 @@ class TaskServiceTest {
     @Mock private UserAccount creator;
     @Mock private UserAccount assignee;
     @Mock private ProjectMember assigneeMembership;
+    @Mock private UserAccount secondAssignee;
+    @Mock private ProjectMember secondAssigneeMembership;
     @Mock private ProjectLabel backendLabel;
     @Mock private ProjectLabel urgentLabel;
     @Mock private ProjectLabel frontendLabel;
@@ -107,8 +109,8 @@ class TaskServiceTest {
     void shouldCreateTaskAssignedToOperationalProjectMember() {
         prepareTaskCreation();
         when(column.getId()).thenReturn(COLUMN_ID);
-        when(projectMemberRepository.findActiveMembership(PROJECT_ID, ASSIGNEE_ID))
-                .thenReturn(Optional.of(assigneeMembership));
+        when(projectMemberRepository.findActiveMemberships(PROJECT_ID, List.of(ASSIGNEE_ID)))
+                .thenReturn(List.of(assigneeMembership));
         when(assigneeMembership.getRole()).thenReturn(ProjectMemberRole.MEMBER);
         when(assigneeMembership.getUser()).thenReturn(assignee);
         when(assignee.getId()).thenReturn(ASSIGNEE_ID);
@@ -116,7 +118,8 @@ class TaskServiceTest {
         when(taskRepository.save(any(Task.class)))
                 .thenAnswer(invocation -> {
                     Task task = invocation.getArgument(0);
-                    assertSame(assignee, task.getAssignee());
+                    assertEquals(1, task.getAssignees().size());
+                    assertSame(assignee, task.getAssignees().getFirst());
                     return task;
                 });
         when(projectLabelRepository.findAllByIdInAndProject_IdAndArchivedAtIsNull(
@@ -131,14 +134,14 @@ class TaskServiceTest {
                         null,
                         TaskPriority.HIGH,
                         LocalDate.now().plusDays(2),
-                        ASSIGNEE_ID,
+                        List.of(ASSIGNEE_ID),
                         List.of(4L, 5L),
                         List.of(TaskTechnology.JAVA, TaskTechnology.ANGULAR)
                 )
         );
 
-        assertEquals(ASSIGNEE_ID, response.assignee().id());
-        assertEquals("Bianca", response.assignee().name());
+        assertEquals(ASSIGNEE_ID, response.assignees().getFirst().id());
+        assertEquals("Bianca", response.assignees().getFirst().name());
         assertEquals(
                 List.of("Backend", "Urgente"),
                 response.labels().stream().map(label -> label.name()).toList()
@@ -152,10 +155,48 @@ class TaskServiceTest {
     }
 
     @Test
+    void shouldCreateTaskWithMultipleAssignees() {
+        prepareTaskCreation();
+        when(column.getId()).thenReturn(COLUMN_ID);
+        when(projectMemberRepository.findActiveMemberships(
+                PROJECT_ID,
+                List.of(ASSIGNEE_ID, SECOND_ASSIGNEE_ID)
+        )).thenReturn(List.of(secondAssigneeMembership, assigneeMembership));
+        when(assigneeMembership.getRole()).thenReturn(ProjectMemberRole.MEMBER);
+        when(assigneeMembership.getUser()).thenReturn(assignee);
+        when(assignee.getId()).thenReturn(ASSIGNEE_ID);
+        when(assignee.getName()).thenReturn("Bianca");
+        when(secondAssigneeMembership.getRole()).thenReturn(ProjectMemberRole.ADMIN);
+        when(secondAssigneeMembership.getUser()).thenReturn(secondAssignee);
+        when(secondAssignee.getId()).thenReturn(SECOND_ASSIGNEE_ID);
+        when(secondAssignee.getName()).thenReturn("Gabriel");
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.create(
+                COLUMN_ID,
+                USER_ID,
+                new CreateTaskRequest(
+                        "Implementar colaboração",
+                        null,
+                        TaskPriority.HIGH,
+                        null,
+                        List.of(ASSIGNEE_ID, SECOND_ASSIGNEE_ID),
+                        List.of(),
+                        List.of()
+                )
+        );
+
+        assertEquals(
+                List.of(ASSIGNEE_ID, SECOND_ASSIGNEE_ID),
+                response.assignees().stream().map(user -> user.id()).toList()
+        );
+    }
+
+    @Test
     void shouldRejectViewerAsTaskAssignee() {
         prepareTaskCreation();
-        when(projectMemberRepository.findActiveMembership(PROJECT_ID, ASSIGNEE_ID))
-                .thenReturn(Optional.of(assigneeMembership));
+        when(projectMemberRepository.findActiveMemberships(PROJECT_ID, List.of(ASSIGNEE_ID)))
+                .thenReturn(List.of(assigneeMembership));
         when(assigneeMembership.getRole()).thenReturn(ProjectMemberRole.VIEWER);
 
         assertThrows(
@@ -168,7 +209,7 @@ class TaskServiceTest {
                                 null,
                                 TaskPriority.MEDIUM,
                                 null,
-                                ASSIGNEE_ID,
+                                List.of(ASSIGNEE_ID),
                                 List.of(),
                                 List.of()
                         )
@@ -181,8 +222,8 @@ class TaskServiceTest {
     @Test
     void shouldRejectAssigneeOutsideProject() {
         prepareTaskCreation();
-        when(projectMemberRepository.findActiveMembership(PROJECT_ID, ASSIGNEE_ID))
-                .thenReturn(Optional.empty());
+        when(projectMemberRepository.findActiveMemberships(PROJECT_ID, List.of(ASSIGNEE_ID)))
+                .thenReturn(List.of());
 
         assertThrows(
                 InvalidTaskAssigneeException.class,
@@ -194,7 +235,7 @@ class TaskServiceTest {
                                 null,
                                 TaskPriority.MEDIUM,
                                 null,
-                                ASSIGNEE_ID,
+                                List.of(ASSIGNEE_ID),
                                 List.of(),
                                 List.of()
                         )
@@ -216,7 +257,7 @@ class TaskServiceTest {
                 null,
                 0
         );
-        task.assignTo(assignee);
+        task.replaceAssignees(List.of(assignee));
 
         when(taskRepository.findActiveById(TASK_ID)).thenReturn(Optional.of(task));
         when(taskRepository.saveAndFlush(task)).thenReturn(task);
@@ -232,14 +273,14 @@ class TaskServiceTest {
                         null,
                         TaskPriority.MEDIUM,
                         null,
-                        null,
+                        List.of(),
                         List.of(6L),
                         List.of()
                 )
         );
 
-        assertNull(response.assignee());
-        assertNull(task.getAssignee());
+        assertEquals(List.of(), response.assignees());
+        assertEquals(List.of(), task.getAssignees());
         assertEquals(List.of("Frontend"), response.labels().stream().map(label -> label.name()).toList());
         verify(projectAccessService).requireWriteAccess(PROJECT_ID, USER_ID);
     }

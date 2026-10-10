@@ -16,7 +16,7 @@ public record TaskResponse(
         LocalDate dueDate,
         Integer position,
         TaskUserSummaryResponse creator,
-        TaskUserSummaryResponse assignee,
+        List<TaskUserSummaryResponse> assignees,
         List<TaskLabelResponse> labels,
         List<TaskTechnology> technologies,
         List<TaskChecklistItemResponse> checklistItems,

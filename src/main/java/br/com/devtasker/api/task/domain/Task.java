@@ -8,6 +8,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Objects;
+import java.util.Set;
 
 import br.com.devtasker.api.board.domain.BoardColumn;
 import br.com.devtasker.api.project.domain.ProjectLabel;
@@ -47,6 +48,7 @@ public class Task {
     public static final int MAXIMUM_DESCRIPTION_LENGTH = 4000;
     public static final int MAXIMUM_LABELS = 5;
     public static final int MAXIMUM_TECHNOLOGIES = 8;
+    public static final int MAXIMUM_ASSIGNEES = 5;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -60,9 +62,16 @@ public class Task {
     @JoinColumn(name = "creator_id", nullable = false)
     private UserAccount creator;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assignee_id")
-    private UserAccount assignee;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "task_assignees",
+            joinColumns = @JoinColumn(name = "task_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    @OrderBy("name ASC, id ASC")
+    @BatchSize(size = 50)
+    @Getter(AccessLevel.NONE)
+    private Set<UserAccount> assignees = new LinkedHashSet<>();
 
     @Column(nullable = false, length = 180)
     private String title;
@@ -202,8 +211,27 @@ public class Task {
         }
     }
 
-    public void assignTo(UserAccount assignee) {
-        this.assignee = assignee;
+    public List<UserAccount> getAssignees() {
+        return List.copyOf(assignees);
+    }
+
+    public void replaceAssignees(List<UserAccount> requestedAssignees) {
+        LinkedHashSet<UserAccount> uniqueAssignees = new LinkedHashSet<>(
+                requestedAssignees == null ? List.of() : requestedAssignees
+        );
+
+        if (uniqueAssignees.contains(null)) {
+            throw new IllegalArgumentException("Os responsáveis da tarefa são inválidos.");
+        }
+
+        if (uniqueAssignees.size() > MAXIMUM_ASSIGNEES) {
+            throw new IllegalArgumentException(
+                    "Uma tarefa pode possuir no máximo 5 responsáveis."
+            );
+        }
+
+        assignees.clear();
+        assignees.addAll(uniqueAssignees);
     }
 
     public List<ProjectLabel> getLabels() {

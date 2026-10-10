@@ -23,6 +23,7 @@ import br.com.devtasker.api.exception.ProjectNotFoundException;
 import br.com.devtasker.api.project.repository.ProjectMemberRepository;
 import br.com.devtasker.api.task.domain.Task;
 import br.com.devtasker.api.task.dto.TaskLabelResponse;
+import br.com.devtasker.api.task.dto.TaskUserSummaryResponse;
 import br.com.devtasker.api.task.repository.TaskRepository;
 
 @Service
@@ -206,16 +207,19 @@ public class BoardQueryService {
     private KanbanTaskResponse toKanbanTaskResponse(
             Task task
     ) {
-        var assignee = task.getAssignee();
-
         return new KanbanTaskResponse(
                 task.getId(),
                 task.getTitle(),
                 task.getPriority(),
                 task.getDueDate(),
                 task.getPosition(),
-                assignee == null ? null : assignee.getId(),
-                assignee == null ? null : assignee.getName(),
+                task.getAssignees().stream()
+                        .map(assignee -> new TaskUserSummaryResponse(
+                                assignee.getId(),
+                                assignee.getName(),
+                                assignee.getProfileImageUrl()
+                        ))
+                        .toList(),
                 task.getLabels().stream()
                         .map(label -> new TaskLabelResponse(
                                 label.getId(),

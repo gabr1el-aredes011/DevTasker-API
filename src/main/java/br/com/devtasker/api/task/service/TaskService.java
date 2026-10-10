@@ -119,7 +119,7 @@ public class TaskService {
                 maximumPosition + 1
         );
 
-        task.assignTo(resolveAssignee(projectId, request.assigneeId()));
+        task.replaceAssignees(resolveAssignees(projectId, request.assigneeIds()));
         task.replaceLabels(resolveLabels(projectId, request.labelIds()));
         task.replaceTechnologies(request.technologies());
 
@@ -216,7 +216,9 @@ public class TaskService {
                 task.getDueDate(),
                 task.getPosition(),
                 toUserResponse(task.getCreator()),
-                toUserResponse(task.getAssignee()),
+                task.getAssignees().stream()
+                        .map(this::toUserResponse)
+                        .toList(),
                 task.getLabels().stream()
                         .map(this::toLabelResponse)
                         .toList(),
@@ -291,7 +293,7 @@ public class TaskService {
                 request.dueDate()
         );
 
-        task.assignTo(resolveAssignee(projectId, request.assigneeId()));
+        task.replaceAssignees(resolveAssignees(projectId, request.assigneeIds()));
 
         List<ProjectLabel> nextLabels = new ArrayList<>(
                 resolveLabels(projectId, request.labelIds())
@@ -479,25 +481,46 @@ public class TaskService {
                 .orElseThrow(TaskNotFoundException::new);
     }
 
-    private UserAccount resolveAssignee(
+    private List<UserAccount> resolveAssignees(
             Long projectId,
-            Long assigneeId
+            List<Long> requestedAssigneeIds
     ) {
-        if (assigneeId == null) {
-            return null;
+        if (requestedAssigneeIds == null || requestedAssigneeIds.isEmpty()) {
+            return List.of();
         }
 
-        ProjectMember membership = projectMemberRepository
-                .findActiveMembership(projectId, assigneeId)
-                .orElseThrow(
-                        InvalidTaskAssigneeException::new
-                );
-
-        if (membership.getRole() == ProjectMemberRole.VIEWER) {
+        LinkedHashSet<Long> assigneeIds = new LinkedHashSet<>(requestedAssigneeIds);
+        if (assigneeIds.contains(null)
+                || assigneeIds.size() != requestedAssigneeIds.size()
+                || assigneeIds.size() > Task.MAXIMUM_ASSIGNEES) {
             throw new InvalidTaskAssigneeException();
         }
 
-        return membership.getUser();
+        List<ProjectMember> memberships = projectMemberRepository.findActiveMemberships(
+                projectId,
+                List.copyOf(assigneeIds)
+        );
+
+        if (memberships.size() != assigneeIds.size()
+                || memberships.stream().anyMatch(
+                        membership -> membership.getRole() == ProjectMemberRole.VIEWER
+                )) {
+            throw new InvalidTaskAssigneeException();
+        }
+
+        Map<Long, ProjectMember> membershipsByUserId = memberships.stream()
+                .collect(Collectors.toMap(
+                        membership -> membership.getUser().getId(),
+                        Function.identity()
+                ));
+
+        if (membershipsByUserId.size() != assigneeIds.size()) {
+            throw new InvalidTaskAssigneeException();
+        }
+
+        return assigneeIds.stream()
+                .map(userId -> membershipsByUserId.get(userId).getUser())
+                .toList();
     }
 
     private List<ProjectLabel> resolveLabels(

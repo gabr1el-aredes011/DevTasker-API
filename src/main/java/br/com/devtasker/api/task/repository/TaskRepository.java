@@ -53,11 +53,11 @@ public interface TaskRepository
     );
     
     @Query("""
-            SELECT task
+            SELECT DISTINCT task
             FROM Task task
             JOIN FETCH task.column boardColumn
             JOIN FETCH boardColumn.board board
-            LEFT JOIN FETCH task.assignee assignee
+            LEFT JOIN FETCH task.assignees assignee
             WHERE board.id = :boardId
               AND board.archivedAt IS NULL
               AND board.project.archivedAt IS NULL
@@ -69,12 +69,17 @@ public interface TaskRepository
     );
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("""
-            UPDATE Task task
-            SET task.assignee = null
-            WHERE task.column.board.project.id = :projectId
-              AND task.assignee.id = :userId
-            """)
+    @Query(value = """
+            DELETE FROM task_assignees assignment
+            WHERE assignment.user_id = :userId
+              AND assignment.task_id IN (
+                  SELECT task.id
+                  FROM tasks task
+                  JOIN board_columns board_column ON board_column.id = task.column_id
+                  JOIN boards board ON board.id = board_column.board_id
+                  WHERE board.project_id = :projectId
+              )
+            """, nativeQuery = true)
     int clearAssigneeByProjectAndUser(
             @Param("projectId") Long projectId,
             @Param("userId") Long userId

@@ -17,6 +17,34 @@ import br.com.devtasker.api.user.domain.UserAccount;
 class TaskTest {
 
     @Test
+    void shouldDeduplicateMultipleAssignees() {
+        Task task = newTask();
+        UserAccount gabriel = Mockito.mock(UserAccount.class);
+        UserAccount bianca = Mockito.mock(UserAccount.class);
+
+        task.replaceAssignees(List.of(gabriel, bianca, gabriel));
+
+        assertEquals(List.of(gabriel, bianca), task.getAssignees());
+    }
+
+    @Test
+    void shouldRejectMoreThanFiveDistinctAssignees() {
+        Task task = newTask();
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> task.replaceAssignees(List.of(
+                        Mockito.mock(UserAccount.class),
+                        Mockito.mock(UserAccount.class),
+                        Mockito.mock(UserAccount.class),
+                        Mockito.mock(UserAccount.class),
+                        Mockito.mock(UserAccount.class),
+                        Mockito.mock(UserAccount.class)
+                ))
+        );
+    }
+
+    @Test
     void shouldDeduplicateCatalogLabelsWithoutChangingTheirOrder() {
         Task task = newTask();
         ProjectLabel backend = Mockito.mock(ProjectLabel.class);

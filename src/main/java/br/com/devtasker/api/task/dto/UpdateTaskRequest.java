@@ -30,7 +30,11 @@ public record UpdateTaskRequest(
 
         LocalDate dueDate,
 
-        Long assigneeId,
+        @Size(
+                max = Task.MAXIMUM_ASSIGNEES,
+                message = "Uma tarefa pode possuir no máximo 5 responsáveis."
+        )
+        List<@NotNull(message = "Os identificadores dos responsáveis são obrigatórios.") Long> assigneeIds,
 
         @Size(
                 max = 5,
